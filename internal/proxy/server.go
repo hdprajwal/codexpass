@@ -63,6 +63,9 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	if s.cfg.Host != "127.0.0.1" && s.cfg.Host != "localhost" && s.cfg.Host != "::1" {
 		fmt.Fprintf(os.Stderr, "warning: binding non-loopback host %q exposes your Codex credential\n", s.cfg.Host)
 	}
+	if s.upstream == nil {
+		s.upstream = newOpenAIUpstream(s.borrow)
+	}
 	srv := &http.Server{Addr: addr, Handler: s.Handler()}
 	go func() {
 		<-ctx.Done()
