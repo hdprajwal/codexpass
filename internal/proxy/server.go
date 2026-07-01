@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hdprajwal/codex2key/internal/codex"
+	"github.com/hdprajwal/codexpass/internal/codex"
 )
 
 // Config holds proxy server configuration.
@@ -96,7 +96,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		defer cancel()
 		_ = srv.Shutdown(shutCtx)
 	}()
-	fmt.Fprintf(os.Stderr, "codex2key serve listening on http://%s\n", addr)
+	fmt.Fprintf(os.Stderr, "codexpass serve listening on http://%s\n", addr)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/hdprajwal/codex2key/internal/codex"
+	"github.com/hdprajwal/codexpass/internal/codex"
 )
 
 // ExportOptions controls the export command.
@@ -15,7 +15,7 @@ type ExportOptions struct {
 }
 
 // Export borrows the credential and writes eval-able shell export lines to out.
-// Human-facing notes go to notes (stderr) so that `eval "$(codex2key export)"`
+// Human-facing notes go to notes (stderr) so that `eval "$(codexpass export)"`
 // never evaluates them.
 func Export(out, notes io.Writer, opts ExportOptions) error {
 	cred, err := codex.Borrow()

@@ -1,4 +1,4 @@
-module github.com/hdprajwal/codex2key
+module github.com/hdprajwal/codexpass
 
 go 1.26.4
 

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/hdprajwal/codex2key/internal/codex"
+	"github.com/hdprajwal/codexpass/internal/codex"
 )
 
 func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {

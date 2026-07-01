@@ -1,4 +1,4 @@
-BINARY := codex2key
+BINARY := codexpass
 
 .PHONY: build test vet fmt clean
 

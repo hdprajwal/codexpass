@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/hdprajwal/codex2key/internal/codex"
+	"github.com/hdprajwal/codexpass/internal/codex"
 )
 
 func TestTokenAuthRequired(t *testing.T) {

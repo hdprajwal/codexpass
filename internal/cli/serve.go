@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/hdprajwal/codex2key/internal/proxy"
+	"github.com/hdprajwal/codexpass/internal/proxy"
 )
 
 // Serve parses flags and runs the proxy server until interrupted.

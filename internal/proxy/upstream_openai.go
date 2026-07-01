@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hdprajwal/codex2key/internal/codex"
+	"github.com/hdprajwal/codexpass/internal/codex"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 	"github.com/openai/openai-go/packages/param"

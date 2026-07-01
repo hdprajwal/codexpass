@@ -1,10 +1,10 @@
-# codex2key
+# codexpass
 
 Borrow the OpenAI credential your [Codex CLI](https://github.com/openai/codex)
 already has, and use it with any tool that reads `OPENAI_API_KEY`.
 
 After `codex login`, the Codex CLI stores a working OpenAI credential in
-`~/.codex/auth.json`. `codex2key` reads that credential — refreshing it if it has
+`~/.codex/auth.json`. `codexpass` reads that credential — refreshing it if it has
 expired — and hands it to you as shell `export` lines or a raw token. No separate
 API key to provision.
 
@@ -15,15 +15,15 @@ turned into a standalone CLI.
 ## Install
 
 ```bash
-go install github.com/hdprajwal/codex2key@latest
+go install github.com/hdprajwal/codexpass@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/hdprajwal/codex2key
-cd codex2key
-make build   # produces ./codex2key
+git clone https://github.com/hdprajwal/codexpass
+cd codexpass
+make build   # produces ./codexpass
 ```
 
 ## Usage
@@ -31,7 +31,7 @@ make build   # produces ./codex2key
 Inject the credential into your current shell session:
 
 ```bash
-eval "$(codex2key export)"
+eval "$(codexpass export)"
 ```
 
 Now `OPENAI_API_KEY` (and, in ChatGPT mode, `OPENAI_BASE_URL`) are set for every
@@ -40,13 +40,13 @@ tool you run in that session.
 Grab the bare token for a script or to paste into code:
 
 ```bash
-KEY=$(codex2key token)
+KEY=$(codexpass token)
 ```
 
 Export only the key, without the base-URL override:
 
 ```bash
-eval "$(codex2key export --no-base-url)"
+eval "$(codexpass export --no-base-url)"
 ```
 
 ## Important: what kind of key you get
@@ -55,14 +55,14 @@ Codex stores credentials in one of two modes:
 
 - **`chatgpt` mode** (you logged in with a ChatGPT subscription): the borrowed
   value is a **ChatGPT OAuth access token**, not a normal `sk-...` key. It only
-  works against the Codex backend, so `codex2key export` also sets
+  works against the Codex backend, so `codexpass export` also sets
   `OPENAI_BASE_URL=https://chatgpt.com/backend-api/codex` and you must use Codex
   model names (`gpt-5.x`). Some tools additionally send a `ChatGPT-Account-ID`
   header, which cannot be passed through an environment variable — tools that
-  don't send it may fail. `codex2key` prints your account id to stderr as a
+  don't send it may fail. `codexpass` prints your account id to stderr as a
   reminder.
 - **`apikey` mode** (you logged in with an API key): the borrowed value is a real
-  OpenAI API key that works against `api.openai.com`. `codex2key` exports just
+  OpenAI API key that works against `api.openai.com`. `codexpass` exports just
   `OPENAI_API_KEY` and leaves the base URL alone.
 
 Expired ChatGPT tokens are refreshed automatically using the refresh token in
@@ -77,20 +77,20 @@ permissions.
 
 | Command | Description |
 | --- | --- |
-| `codex2key export [--no-base-url]` | Print eval-able `export` lines to stdout; notes go to stderr. |
-| `codex2key token` | Print the bare token to stdout. |
-| `codex2key serve [--host H] [--port N] [--token S]` | Run a local OpenAI-compatible proxy to the Codex backend. |
-| `codex2key --version` | Print the version. |
-| `codex2key --help` | Show help. |
+| `codexpass export [--no-base-url]` | Print eval-able `export` lines to stdout; notes go to stderr. |
+| `codexpass token` | Print the bare token to stdout. |
+| `codexpass serve [--host H] [--port N] [--token S]` | Run a local OpenAI-compatible proxy to the Codex backend. |
+| `codexpass --version` | Print the version. |
+| `codexpass --help` | Show help. |
 
 ## Run as a local OpenAI-compatible proxy
 
-`codex2key serve` exposes an OpenAI chat/completions API on localhost and
+`codexpass serve` exposes an OpenAI chat/completions API on localhost and
 translates to the Codex backend, so tools that speak `/v1/chat/completions`
 (like the Zed editor) can use your Codex subscription.
 
 ```bash
-codex2key serve --port 8080            # add --token <secret> to require a key
+codexpass serve --port 8080            # add --token <secret> to require a key
 ```
 
 ### Zed
@@ -124,7 +124,7 @@ to loopback (the default) and don't expose it to others.
 ```bash
 make test    # go test ./...
 make vet     # go vet ./...
-make build   # build ./codex2key
+make build   # build ./codexpass
 ```
 
 ## Credits

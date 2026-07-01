@@ -1,4 +1,4 @@
-// Command codex2key borrows the OpenAI credential stored by the Codex CLI
+// Command codexpass borrows the OpenAI credential stored by the Codex CLI
 // (~/.codex/auth.json) and hands it to you as shell export lines or a raw token.
 package main
 
@@ -7,25 +7,25 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hdprajwal/codex2key/internal/cli"
+	"github.com/hdprajwal/codexpass/internal/cli"
 )
 
 // version is the CLI version string, overridable at build time with
 // -ldflags "-X main.version=...".
 var version = "0.1.0-dev"
 
-const usage = `codex2key - borrow the OpenAI credential from your Codex login
+const usage = `codexpass - borrow the OpenAI credential from your Codex login
 
 Usage:
-  codex2key export [--no-base-url]   Print eval-able shell export lines
-  codex2key token                    Print the bare token to stdout
-  codex2key serve [--port N]              Run a local OpenAI-compatible proxy
-  codex2key --version                Print version
-  codex2key --help                   Print this help
+  codexpass export [--no-base-url]   Print eval-able shell export lines
+  codexpass token                    Print the bare token to stdout
+  codexpass serve [--port N]              Run a local OpenAI-compatible proxy
+  codexpass --version                Print version
+  codexpass --help                   Print this help
 
 Typical use:
-  eval "$(codex2key export)"         Inject the key into the current shell
-  KEY=$(codex2key token)             Capture the token for scripts or code
+  eval "$(codexpass export)"         Inject the key into the current shell
+  KEY=$(codexpass token)             Capture the token for scripts or code
 `
 
 func main() {
@@ -48,7 +48,7 @@ func run(args []string) int {
 		return 0
 	case "token":
 		if err := cli.Token(os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "codex2key: %v\n", err)
+			fmt.Fprintf(os.Stderr, "codexpass: %v\n", err)
 			return 1
 		}
 		return 0
@@ -59,18 +59,18 @@ func run(args []string) int {
 			return 2
 		}
 		if err := cli.Export(os.Stdout, os.Stderr, cli.ExportOptions{NoBaseURL: *noBaseURL}); err != nil {
-			fmt.Fprintf(os.Stderr, "codex2key: %v\n", err)
+			fmt.Fprintf(os.Stderr, "codexpass: %v\n", err)
 			return 1
 		}
 		return 0
 	case "serve":
 		if err := cli.Serve(args[1:]); err != nil {
-			fmt.Fprintf(os.Stderr, "codex2key: %v\n", err)
+			fmt.Fprintf(os.Stderr, "codexpass: %v\n", err)
 			return 1
 		}
 		return 0
 	default:
-		fmt.Fprintf(os.Stderr, "codex2key: unknown command %q\n\n%s", args[0], usage)
+		fmt.Fprintf(os.Stderr, "codexpass: unknown command %q\n\n%s", args[0], usage)
 		return 2
 	}
 }
