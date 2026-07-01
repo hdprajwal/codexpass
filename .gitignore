@@ -1,0 +1,15 @@
+# Build output
+/codex2key
+/dist/
+
+# Go
+*.test
+*.out
+
+# Design docs (kept local, not committed)
+/docs/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
