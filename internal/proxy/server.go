@@ -45,7 +45,7 @@ func (s *Server) SetUpstream(u Upstream) { s.upstream = u }
 // SetBorrow overrides the credential source (tests).
 func (s *Server) SetBorrow(fn func() (codex.Credential, error)) { s.borrow = fn }
 
-// Handler returns the HTTP routes.
+// Handler returns the HTTP routes, wrapped with optional client auth.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +54,30 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.HandleFunc("GET /v1/models", s.handleModels)
 	mux.HandleFunc("POST /v1/chat/completions", s.handleChat)
-	return mux
+	mux.HandleFunc("POST /v1/responses", s.handleResponsesPassthrough)
+	for _, p := range []string{"POST /v1/embeddings", "POST /v1/images/generations", "POST /v1/audio/speech", "POST /v1/audio/transcriptions"} {
+		mux.HandleFunc(p, func(w http.ResponseWriter, r *http.Request) {
+			writeError(w, http.StatusNotImplemented, "not_implemented", "the Codex backend does not serve this endpoint")
+		})
+	}
+	return s.auth(mux)
+}
+
+// auth enforces the optional client token (except /healthz) and does verbose
+// metadata logging.
+func (s *Server) auth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "%s %s\n", r.Method, r.URL.Path)
+		}
+		if s.cfg.Token != "" && r.URL.Path != "/healthz" {
+			if r.Header.Get("Authorization") != "Bearer "+s.cfg.Token {
+				writeError(w, http.StatusUnauthorized, "authentication_error", "missing or invalid API key")
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // ListenAndServe runs until ctx is cancelled, then shuts down gracefully.
