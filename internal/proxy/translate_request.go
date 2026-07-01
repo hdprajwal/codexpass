@@ -1,6 +1,9 @@
 package proxy
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+)
 
 // toUpstream translates a chat/completions request into a normalized Responses
 // request. System/developer messages become instructions; the rest become input.
@@ -41,7 +44,42 @@ func toUpstream(req ChatRequest) (UpstreamRequest, error) {
 		}
 	}
 	up.Instructions = strings.Join(instructions, "\n\n")
+
+	for _, t := range req.Tools {
+		if t.Type != "function" {
+			continue
+		}
+		up.Tools = append(up.Tools, FunctionTool{
+			Name:        t.Function.Name,
+			Description: t.Function.Description,
+			Parameters:  t.Function.Parameters,
+		})
+	}
+	up.ToolChoice = parseToolChoice(req.ToolChoice)
+
 	return up, nil
+}
+
+// parseToolChoice normalizes tool_choice: a bare string ("auto"/"none"/
+// "required") stays as-is; an object {"type":"function","function":{"name":..}}
+// yields the function name.
+func parseToolChoice(raw []byte) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		return s
+	}
+	var obj struct {
+		Function struct {
+			Name string `json:"name"`
+		} `json:"function"`
+	}
+	if err := json.Unmarshal(raw, &obj); err == nil {
+		return obj.Function.Name
+	}
+	return ""
 }
 
 // userInputItem builds a user message input item (text only for now; images

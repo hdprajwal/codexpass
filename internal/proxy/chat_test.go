@@ -60,3 +60,30 @@ func TestChatStreamingText(t *testing.T) {
 		t.Errorf("no DONE sentinel: %s", body)
 	}
 }
+
+func TestChatNonStreamToolCalls(t *testing.T) {
+	s := testServer(&fakeUpstream{result: UpstreamResult{
+		ToolCalls: []ToolCall{{ID: "call_1", Name: "get_weather", Arguments: `{"city":"NYC"}`}},
+	}})
+	rec := postChat(s, `{"model":"gpt-5.4","messages":[{"role":"user","content":"weather?"}]}`)
+	var got ChatCompletion
+	_ = json.Unmarshal(rec.Body.Bytes(), &got)
+	if got.Choices[0].FinishReason != "tool_calls" {
+		t.Errorf("finish = %q", got.Choices[0].FinishReason)
+	}
+	if len(got.Choices[0].Message.ToolCalls) != 1 || got.Choices[0].Message.ToolCalls[0].Function.Name != "get_weather" {
+		t.Errorf("tool_calls wrong: %s", rec.Body.String())
+	}
+}
+
+func TestChatStreamToolCalls(t *testing.T) {
+	s := testServer(&fakeUpstream{events: []StreamEvent{
+		{Kind: "tool_call", ToolCall: &ToolCall{ID: "call_1", Name: "get_weather", Arguments: `{"city":"NYC"}`}},
+		{Kind: "completed"},
+	}})
+	rec := postChat(s, `{"model":"gpt-5.4","stream":true,"messages":[{"role":"user","content":"weather?"}]}`)
+	body := rec.Body.String()
+	if !strings.Contains(body, `"get_weather"`) || !strings.Contains(body, `"tool_calls"`) {
+		t.Errorf("no tool_call chunk / finish: %s", body)
+	}
+}

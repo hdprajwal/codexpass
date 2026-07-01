@@ -44,3 +44,49 @@ func TestToUpstreamMaxTokens(t *testing.T) {
 		t.Fatalf("max_output_tokens not mapped")
 	}
 }
+
+func TestToUpstreamTools(t *testing.T) {
+	req := ChatRequest{
+		Model:      "gpt-5.4",
+		ToolChoice: []byte(`"auto"`),
+		Tools: []ChatTool{{
+			Type: "function",
+			Function: ChatFunction{
+				Name:        "get_weather",
+				Description: "Get weather",
+				Parameters:  []byte(`{"type":"object","properties":{"city":{"type":"string"}}}`),
+			},
+		}},
+		Messages: []ChatMessage{
+			{Role: "user", Content: []byte(`"weather?"`)},
+			{Role: "assistant", ToolCalls: []ChatToolCall{{ID: "call_1", Type: "function",
+				Function: struct {
+					Name      string `json:"name"`
+					Arguments string `json:"arguments"`
+				}{Name: "get_weather", Arguments: `{"city":"NYC"}`}}}},
+			{Role: "tool", ToolCallID: "call_1", Content: []byte(`"sunny"`)},
+		},
+	}
+	up, err := toUpstream(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(up.Tools) != 1 || up.Tools[0].Name != "get_weather" {
+		t.Fatalf("tools = %+v", up.Tools)
+	}
+	if up.ToolChoice != "auto" {
+		t.Errorf("tool_choice = %q", up.ToolChoice)
+	}
+	var sawCall, sawOutput bool
+	for _, it := range up.Input {
+		if it.Kind == "function_call" && it.CallID == "call_1" && it.Name == "get_weather" {
+			sawCall = true
+		}
+		if it.Kind == "function_call_output" && it.CallID == "call_1" && it.Output == "sunny" {
+			sawOutput = true
+		}
+	}
+	if !sawCall || !sawOutput {
+		t.Errorf("missing call/output items: %+v", up.Input)
+	}
+}
