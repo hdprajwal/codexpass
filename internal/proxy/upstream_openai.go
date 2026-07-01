@@ -100,10 +100,30 @@ func buildInput(items []InputItem) responses.ResponseInputParam {
 		case "function_call_output":
 			out = append(out, responses.ResponseInputItemParamOfFunctionCallOutput(it.CallID, it.Output))
 		default: // "message"
+			if it.Role == "assistant" {
+				// A replayed assistant turn must not use input_text content parts:
+				// the Responses API only allows output_text/refusal there and 400s
+				// otherwise. Send it as an easy message with string content, which
+				// carries no part type and needs no fabricated item id/status.
+				out = append(out, responses.ResponseInputItemParamOfMessage(contentText(it.Content), responses.EasyInputMessageRoleAssistant))
+				continue
+			}
 			out = append(out, responses.ResponseInputItemParamOfInputMessage(buildContent(it.Content), it.Role))
 		}
 	}
 	return out
+}
+
+// contentText concatenates the text of a message's text parts, used for
+// assistant turns that are replayed as plain-string easy messages.
+func contentText(parts []InputContent) string {
+	var b strings.Builder
+	for _, p := range parts {
+		if p.Kind == "input_text" {
+			b.WriteString(p.Text)
+		}
+	}
+	return b.String()
 }
 
 // buildContent converts normalized message content parts into SDK content parts.
