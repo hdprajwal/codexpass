@@ -57,6 +57,21 @@ func toUpstream(req ChatRequest) (UpstreamRequest, error) {
 	}
 	up.ToolChoice = parseToolChoice(req.ToolChoice)
 
+	if rf := req.ResponseFormat; rf != nil {
+		switch rf.Type {
+		case "json_object":
+			up.TextFormat = &TextFormat{Kind: "json_object"}
+		case "json_schema":
+			if rf.JSONSchema != nil {
+				up.TextFormat = &TextFormat{
+					Kind:   "json_schema",
+					Name:   rf.JSONSchema.Name,
+					Schema: rf.JSONSchema.Schema,
+				}
+			}
+		}
+	}
+
 	return up, nil
 }
 

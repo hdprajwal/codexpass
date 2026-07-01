@@ -107,3 +107,21 @@ func TestToUpstreamVision(t *testing.T) {
 		t.Errorf("image part = %+v", parts[1])
 	}
 }
+
+func TestToUpstreamResponseFormat(t *testing.T) {
+	up, _ := toUpstream(ChatRequest{
+		Model: "m",
+		ResponseFormat: &ResponseFormat{Type: "json_schema", JSONSchema: &JSONSchemaSpec{
+			Name:   "person",
+			Schema: []byte(`{"type":"object"}`),
+		}},
+	})
+	if up.TextFormat == nil || up.TextFormat.Kind != "json_schema" || up.TextFormat.Name != "person" {
+		t.Fatalf("text format = %+v", up.TextFormat)
+	}
+
+	up2, _ := toUpstream(ChatRequest{Model: "m", ResponseFormat: &ResponseFormat{Type: "json_object"}})
+	if up2.TextFormat == nil || up2.TextFormat.Kind != "json_object" {
+		t.Fatalf("json_object format = %+v", up2.TextFormat)
+	}
+}
