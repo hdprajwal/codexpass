@@ -9,6 +9,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/hdprajwal/codex2key/internal/codex"
 )
 
 // Config holds proxy server configuration.
@@ -21,7 +23,9 @@ type Config struct {
 
 // Server is the OpenAI-compatible proxy.
 type Server struct {
-	cfg Config
+	cfg      Config
+	borrow   func() (codex.Credential, error)
+	upstream Upstream
 }
 
 // New builds a Server, applying defaults.
@@ -32,8 +36,14 @@ func New(cfg Config) *Server {
 	if cfg.Port == 0 {
 		cfg.Port = 8080
 	}
-	return &Server{cfg: cfg}
+	return &Server{cfg: cfg, borrow: codex.Borrow}
 }
+
+// SetUpstream overrides the upstream backend (tests).
+func (s *Server) SetUpstream(u Upstream) { s.upstream = u }
+
+// SetBorrow overrides the credential source (tests).
+func (s *Server) SetBorrow(fn func() (codex.Credential, error)) { s.borrow = fn }
 
 // Handler returns the HTTP routes.
 func (s *Server) Handler() http.Handler {
@@ -42,6 +52,7 @@ func (s *Server) Handler() http.Handler {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
+	mux.HandleFunc("GET /v1/models", s.handleModels)
 	return mux
 }
 
