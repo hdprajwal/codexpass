@@ -73,6 +73,30 @@ func borrowChatGPT(a *auth, now func() time.Time) (Credential, error) {
 		return Credential{APIKey: access, AccountID: accountID, Mode: "chatgpt"}, nil
 	}
 
-	// TODO(slice 5): refresh the expired token via the OAuth endpoint.
-	return Credential{}, fmt.Errorf("%w: access token expired and refresh is not yet available", ErrRefreshFailed)
+	// Expired or near-expiry: refresh via the OAuth endpoint and persist.
+	refreshToken := a.tokenString("refresh_token")
+	if refreshToken == "" {
+		return Credential{}, fmt.Errorf("%w. Run `codex login` to re-authenticate", ErrNoRefreshToken)
+	}
+
+	tokens, err := refreshTokens(refreshToken)
+	if err != nil {
+		return Credential{}, err
+	}
+	if tokens.AccessToken != "" {
+		a.setToken("access_token", tokens.AccessToken)
+	}
+	if tokens.IDToken != "" {
+		a.setToken("id_token", tokens.IDToken)
+	}
+	if tokens.RefreshToken != "" {
+		a.setToken("refresh_token", tokens.RefreshToken)
+	}
+	a.setLastRefresh(now().UTC().Format("2006-01-02T15:04:05+00:00"))
+
+	if err := a.save(); err != nil {
+		return Credential{}, fmt.Errorf("writing refreshed tokens to %s: %w", a.path, err)
+	}
+
+	return Credential{APIKey: a.tokenString("access_token"), AccountID: accountID, Mode: "chatgpt"}, nil
 }
