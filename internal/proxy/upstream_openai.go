@@ -48,7 +48,10 @@ func (u *openAIUpstream) client() (openai.Client, codex.Credential, error) {
 
 // buildParams maps a normalized request onto SDK Responses params. store is
 // always false (the borrowed credential must not persist responses upstream).
-func buildParams(req UpstreamRequest) responses.ResponseNewParams {
+// When codexMode is true the sampling/length params (temperature, top_p,
+// max_output_tokens) are omitted: the Codex backend rejects them with
+// "Unsupported parameter: ...". They are kept for the standard OpenAI API.
+func buildParams(req UpstreamRequest, codexMode bool) responses.ResponseNewParams {
 	params := responses.ResponseNewParams{
 		Model: shared.ResponsesModel(req.Model),
 		Store: openai.Bool(false),
@@ -57,14 +60,16 @@ func buildParams(req UpstreamRequest) responses.ResponseNewParams {
 	if req.Instructions != "" {
 		params.Instructions = openai.String(req.Instructions)
 	}
-	if req.MaxOutputTokens != nil {
-		params.MaxOutputTokens = openai.Int(*req.MaxOutputTokens)
-	}
-	if req.Temperature != nil {
-		params.Temperature = openai.Float(*req.Temperature)
-	}
-	if req.TopP != nil {
-		params.TopP = openai.Float(*req.TopP)
+	if !codexMode {
+		if req.MaxOutputTokens != nil {
+			params.MaxOutputTokens = openai.Int(*req.MaxOutputTokens)
+		}
+		if req.Temperature != nil {
+			params.Temperature = openai.Float(*req.Temperature)
+		}
+		if req.TopP != nil {
+			params.TopP = openai.Float(*req.TopP)
+		}
 	}
 	if req.ReasoningEffort != "" {
 		params.Reasoning = shared.ReasoningParam{Effort: shared.ReasoningEffort(req.ReasoningEffort)}
@@ -222,11 +227,13 @@ func (u *openAIUpstream) Complete(ctx context.Context, req UpstreamRequest) (Ups
 }
 
 func (u *openAIUpstream) Stream(ctx context.Context, req UpstreamRequest, onEvent func(StreamEvent) error) error {
-	client, _, err := u.client()
+	client, cred, err := u.client()
 	if err != nil {
 		return err
 	}
-	stream := client.Responses.NewStreaming(ctx, buildParams(req))
+	// chatgpt mode targets the Codex backend (BaseURL set); apikey mode uses the
+	// standard OpenAI API, which accepts the sampling/length params.
+	stream := client.Responses.NewStreaming(ctx, buildParams(req, cred.BaseURL() != ""))
 	for stream.Next() {
 		se, ok := normalizeEvent(stream.Current())
 		if !ok {
