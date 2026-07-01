@@ -42,7 +42,32 @@ func writeUpstreamError(w http.ResponseWriter, err error) {
 	writeError(w, http.StatusBadGateway, "upstream_error", err.Error())
 }
 
-// handleChatStream is a temporary stub replaced in the streaming task.
+// handleChatStream streams a chat/completions response as SSE chunks.
 func (s *Server) handleChatStream(w http.ResponseWriter, r *http.Request, req ChatRequest, up UpstreamRequest) {
-	writeError(w, http.StatusNotImplemented, "not_implemented", "streaming not yet implemented")
+	sse, ok := newSSEWriter(w)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "server_error", "streaming unsupported")
+		return
+	}
+	st := newStreamState(req.Model, up.IncludeUsage)
+	err := s.upstream.Stream(r.Context(), up, func(e StreamEvent) error {
+		chunks, err := st.onEvent(e)
+		if err != nil {
+			return err
+		}
+		for _, c := range chunks {
+			if err := sse.send(c); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		_ = sse.send(map[string]any{"error": map[string]any{"message": err.Error(), "type": "upstream_error"}})
+		return
+	}
+	for _, c := range st.finalChunks() {
+		_ = sse.send(c)
+	}
+	_ = sse.done()
 }

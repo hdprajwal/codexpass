@@ -42,3 +42,21 @@ func TestChatNonStreamingText(t *testing.T) {
 		t.Errorf("usage wrong: %+v", got.Usage)
 	}
 }
+
+func TestChatStreamingText(t *testing.T) {
+	s := testServer(&fakeUpstream{events: []StreamEvent{
+		{Kind: "text.delta", TextDelta: "Hi"},
+		{Kind: "completed", Usage: &Usage{InputTokens: 1, OutputTokens: 1}},
+	}})
+	rec := postChat(s, `{"model":"gpt-5.4","stream":true,"messages":[{"role":"user","content":"hi"}]}`)
+	body := rec.Body.String()
+	if !strings.Contains(body, `"chat.completion.chunk"`) {
+		t.Errorf("no chunk object: %s", body)
+	}
+	if !strings.Contains(body, `"content":"Hi"`) {
+		t.Errorf("no content delta: %s", body)
+	}
+	if !strings.Contains(body, "data: [DONE]") {
+		t.Errorf("no DONE sentinel: %s", body)
+	}
+}

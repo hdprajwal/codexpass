@@ -58,3 +58,25 @@ type OutUsage struct {
 	CompletionTokens int64 `json:"completion_tokens"`
 	TotalTokens      int64 `json:"total_tokens"`
 }
+
+// ChatCompletionChunk is one streamed chat/completions chunk.
+type ChatCompletionChunk struct {
+	ID      string        `json:"id"`
+	Object  string        `json:"object"`
+	Created int64         `json:"created"`
+	Model   string        `json:"model"`
+	Choices []ChunkChoice `json:"choices"`
+	Usage   *OutUsage     `json:"usage,omitempty"`
+}
+
+type ChunkChoice struct {
+	Index        int     `json:"index"`
+	Delta        Delta   `json:"delta"`
+	FinishReason *string `json:"finish_reason"`
+}
+
+type Delta struct {
+	Role      string        `json:"role,omitempty"`
+	Content   string        `json:"content,omitempty"`
+	ToolCalls []OutToolCall `json:"tool_calls,omitempty"`
+}
