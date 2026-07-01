@@ -82,15 +82,30 @@ func parseToolChoice(raw []byte) string {
 	return ""
 }
 
-// userInputItem builds a user message input item (text only for now; images
-// added in the vision task).
+// userInputItem builds a user message, preserving image parts for vision.
 func userInputItem(m ChatMessage) InputItem {
-	text, _ := m.textContent()
-	return InputItem{
-		Kind:    "message",
-		Role:    "user",
-		Content: []InputContent{{Kind: "input_text", Text: text}},
+	parts := m.contentParts()
+	if parts == nil {
+		text, _ := m.textContent()
+		return InputItem{Kind: "message", Role: "user",
+			Content: []InputContent{{Kind: "input_text", Text: text}}}
 	}
+	var content []InputContent
+	for _, p := range parts {
+		switch p.Type {
+		case "text":
+			content = append(content, InputContent{Kind: "input_text", Text: p.Text})
+		case "image_url":
+			if p.ImageURL != nil {
+				content = append(content, InputContent{
+					Kind:     "input_image",
+					ImageURL: p.ImageURL.URL,
+					Detail:   p.ImageURL.Detail,
+				})
+			}
+		}
+	}
+	return InputItem{Kind: "message", Role: "user", Content: content}
 }
 
 // assistantInputItems builds assistant text and any prior tool calls.

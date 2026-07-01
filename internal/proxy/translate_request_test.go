@@ -90,3 +90,20 @@ func TestToUpstreamTools(t *testing.T) {
 		t.Errorf("missing call/output items: %+v", up.Input)
 	}
 }
+
+func TestToUpstreamVision(t *testing.T) {
+	content := `[{"type":"text","text":"what is this"},{"type":"image_url","image_url":{"url":"data:image/png;base64,AAAA","detail":"low"}}]`
+	up, _ := toUpstream(ChatRequest{Model: "m", Messages: []ChatMessage{
+		{Role: "user", Content: []byte(content)},
+	}})
+	parts := up.Input[0].Content
+	if len(parts) != 2 {
+		t.Fatalf("parts = %d, want 2", len(parts))
+	}
+	if parts[0].Kind != "input_text" || parts[0].Text != "what is this" {
+		t.Errorf("text part = %+v", parts[0])
+	}
+	if parts[1].Kind != "input_image" || parts[1].ImageURL != "data:image/png;base64,AAAA" || parts[1].Detail != "low" {
+		t.Errorf("image part = %+v", parts[1])
+	}
+}
