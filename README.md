@@ -1,18 +1,28 @@
-# codexpass
+<p align="center">
+  <picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/header/graph.svg?title=codexpass&amp;subtitle=Use+your+Codex+login+anywhere&amp;logo=openai&amp;logoColor=848484&amp;mode=dark&amp;align=left&amp;font=geist-mono&amp;border=false" /><img alt="codexpass" src="https://shieldcn.dev/header/graph.svg?title=codexpass&amp;subtitle=Use+your+Codex+login+anywhere&amp;logo=openai&amp;logoColor=848484&amp;mode=light&amp;align=left&amp;font=geist-mono&amp;border=false" /></picture>
+</p>
 
-Borrow the OpenAI credential your [Codex CLI](https://github.com/openai/codex)
-already has, and use it with any tool that reads `OPENAI_API_KEY`.
+<div align="center">
 
-After `codex login`, the Codex CLI stores a working OpenAI credential in
-`~/.codex/auth.json`. `codexpass` reads that credential — refreshing it if it has
-expired — and hands it to you as shell `export` lines or a raw token. No separate
-API key to provision.
+The [Codex CLI](https://github.com/openai/codex) stores a working OpenAI credential on your machine after you log in. **codexpass** reads that credential and lets your other tools use it. You can print it as shell `export` lines, grab it as a raw token, or run a small local server that lets editors like Zed use your ChatGPT subscription. No separate API key to set up.
 
-This is a small Go port of the `borrow_codex_key()` logic from
-[simonw/llm-openai-via-codex](https://github.com/simonw/llm-openai-via-codex),
-turned into a standalone CLI.
+[Install](#install) · [Usage](#usage) · [Local proxy](#run-a-local-openai-compatible-proxy) · [Releases](https://github.com/hdprajwal/codexpass/releases)
+
+</div>
+
+## How it works
+
+After `codex login`, the Codex CLI saves a working OpenAI credential in
+`~/.codex/auth.json`. `codexpass` reads that file. If the token has expired, it
+refreshes it with the stored refresh token and writes the new token back safely
+with `0600` file permissions. Then it hands you the credential in the shape you
+need.
 
 ## Install
+
+Download a prebuilt binary for Linux, macOS, or Windows from the
+[latest release](https://github.com/hdprajwal/codexpass/releases/latest), or
+install with Go:
 
 ```bash
 go install github.com/hdprajwal/codexpass@latest
@@ -28,7 +38,7 @@ make build   # produces ./codexpass
 
 ## Usage
 
-Inject the credential into your current shell session:
+Load the credential into your current shell session:
 
 ```bash
 eval "$(codexpass export)"
@@ -49,45 +59,12 @@ Export only the key, without the base-URL override:
 eval "$(codexpass export --no-base-url)"
 ```
 
-## Important: what kind of key you get
+## Run a local OpenAI-compatible proxy
 
-Codex stores credentials in one of two modes:
-
-- **`chatgpt` mode** (you logged in with a ChatGPT subscription): the borrowed
-  value is a **ChatGPT OAuth access token**, not a normal `sk-...` key. It only
-  works against the Codex backend, so `codexpass export` also sets
-  `OPENAI_BASE_URL=https://chatgpt.com/backend-api/codex` and you must use Codex
-  model names (`gpt-5.x`). Some tools additionally send a `ChatGPT-Account-ID`
-  header, which cannot be passed through an environment variable — tools that
-  don't send it may fail. `codexpass` prints your account id to stderr as a
-  reminder.
-- **`apikey` mode** (you logged in with an API key): the borrowed value is a real
-  OpenAI API key that works against `api.openai.com`. `codexpass` exports just
-  `OPENAI_API_KEY` and leaves the base URL alone.
-
-Expired ChatGPT tokens are refreshed automatically using the refresh token in
-`auth.json`, and the refreshed tokens are written back atomically with `0600`
-permissions.
-
-## Configuration
-
-- `CODEX_HOME` — override the Codex home directory (default `~/.codex`).
-
-## Commands
-
-| Command | Description |
-| --- | --- |
-| `codexpass export [--no-base-url]` | Print eval-able `export` lines to stdout; notes go to stderr. |
-| `codexpass token` | Print the bare token to stdout. |
-| `codexpass serve [--host H] [--port N] [--token S]` | Run a local OpenAI-compatible proxy to the Codex backend. |
-| `codexpass --version` | Print the version. |
-| `codexpass --help` | Show help. |
-
-## Run as a local OpenAI-compatible proxy
-
-`codexpass serve` exposes an OpenAI chat/completions API on localhost and
-translates to the Codex backend, so tools that speak `/v1/chat/completions`
-(like the Zed editor) can use your Codex subscription.
+`codexpass serve` runs a small local server that speaks the OpenAI
+chat/completions API and forwards requests to the Codex backend. Tools that
+support `/v1/chat/completions`, like the Zed editor, can then use your Codex
+subscription.
 
 ```bash
 codexpass serve --port 8080            # add --token <secret> to require a key
@@ -95,7 +72,8 @@ codexpass serve --port 8080            # add --token <secret> to require a key
 
 ### Zed
 
-In Zed `settings.json` (schema may vary by Zed version — check current docs):
+In Zed `settings.json` (the schema may change between Zed versions, so check
+the current docs):
 
 ```json
 {
@@ -112,12 +90,43 @@ In Zed `settings.json` (schema may vary by Zed version — check current docs):
 }
 ```
 
-When Zed asks for an API key, enter the `--token` value (or any placeholder if
-you didn't set one). The real Codex credential stays inside the proxy.
+When Zed asks for an API key, enter the `--token` value, or any placeholder if
+you did not set one. The real Codex credential stays inside the proxy.
 
-**Caveats:** this bills against your ChatGPT subscription quota, serves only
-chat (no embeddings/images/audio), and is for personal single-user use — bind it
-to loopback (the default) and don't expose it to others.
+A few caveats. Requests count against your ChatGPT subscription quota. The
+proxy only serves chat, so no embeddings, images, or audio. It is meant for
+personal, single-user use. Keep it bound to loopback (the default) and do not
+expose it to others.
+
+## What kind of key you get
+
+Codex stores credentials in one of two modes:
+
+- **`chatgpt` mode**: you logged in with a ChatGPT subscription. The borrowed
+  value is a ChatGPT OAuth access token, not a normal `sk-...` key. It only
+  works against the Codex backend, so `codexpass export` also sets
+  `OPENAI_BASE_URL=https://chatgpt.com/backend-api/codex`, and you have to use
+  Codex model names (`gpt-5.x`). Some tools also send a `ChatGPT-Account-ID`
+  header. That header cannot be passed through an environment variable, so
+  tools that do not send it may fail. `codexpass` prints your account id to
+  stderr as a reminder.
+- **`apikey` mode**: you logged in with an API key. The borrowed value is a
+  real OpenAI API key that works against `api.openai.com`. `codexpass` exports
+  just `OPENAI_API_KEY` and leaves the base URL alone.
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `codexpass export [--no-base-url]` | Print eval-able `export` lines to stdout; notes go to stderr. |
+| `codexpass token` | Print the bare token to stdout. |
+| `codexpass serve [--host H] [--port N] [--token S]` | Run a local OpenAI-compatible proxy to the Codex backend. |
+| `codexpass --version` | Print the version. |
+| `codexpass --help` | Show help. |
+
+## Configuration
+
+- `CODEX_HOME`: override the Codex home directory. The default is `~/.codex`.
 
 ## Development
 
@@ -129,9 +138,11 @@ make build   # build ./codexpass
 
 ## Credits
 
-The credential-borrowing and token-refresh logic is ported from Simon Willison's
-[llm-openai-via-codex](https://github.com/simonw/llm-openai-via-codex).
+The credential-borrowing and token-refresh logic is ported from Simon
+Willison's [llm-openai-via-codex](https://github.com/simonw/llm-openai-via-codex).
 
-## License
+<div align="center">
 
-Apache-2.0. See [LICENSE](LICENSE).
+[Apache-2.0](LICENSE) · Built by [HD Prajwal](https://github.com/hdprajwal) · [Contribute](https://github.com/hdprajwal/codexpass)
+
+</div>
