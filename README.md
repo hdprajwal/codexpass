@@ -79,8 +79,45 @@ permissions.
 | --- | --- |
 | `codex2key export [--no-base-url]` | Print eval-able `export` lines to stdout; notes go to stderr. |
 | `codex2key token` | Print the bare token to stdout. |
+| `codex2key serve [--host H] [--port N] [--token S]` | Run a local OpenAI-compatible proxy to the Codex backend. |
 | `codex2key --version` | Print the version. |
 | `codex2key --help` | Show help. |
+
+## Run as a local OpenAI-compatible proxy
+
+`codex2key serve` exposes an OpenAI chat/completions API on localhost and
+translates to the Codex backend, so tools that speak `/v1/chat/completions`
+(like the Zed editor) can use your Codex subscription.
+
+```bash
+codex2key serve --port 8080            # add --token <secret> to require a key
+```
+
+### Zed
+
+In Zed `settings.json` (schema may vary by Zed version — check current docs):
+
+```json
+{
+  "language_models": {
+    "openai_compatible": {
+      "Codex": {
+        "api_url": "http://localhost:8080/v1",
+        "available_models": [
+          { "name": "gpt-5.4", "display_name": "GPT-5.4 (Codex)", "max_tokens": 128000 }
+        ]
+      }
+    }
+  }
+}
+```
+
+When Zed asks for an API key, enter the `--token` value (or any placeholder if
+you didn't set one). The real Codex credential stays inside the proxy.
+
+**Caveats:** this bills against your ChatGPT subscription quota, serves only
+chat (no embeddings/images/audio), and is for personal single-user use — bind it
+to loopback (the default) and don't expose it to others.
 
 ## Development
 
