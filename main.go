@@ -19,6 +19,7 @@ const usage = `codex2key - borrow the OpenAI credential from your Codex login
 Usage:
   codex2key export [--no-base-url]   Print eval-able shell export lines
   codex2key token                    Print the bare token to stdout
+  codex2key serve [--port N]              Run a local OpenAI-compatible proxy
   codex2key --version                Print version
   codex2key --help                   Print this help
 
@@ -58,6 +59,12 @@ func run(args []string) int {
 			return 2
 		}
 		if err := cli.Export(os.Stdout, os.Stderr, cli.ExportOptions{NoBaseURL: *noBaseURL}); err != nil {
+			fmt.Fprintf(os.Stderr, "codex2key: %v\n", err)
+			return 1
+		}
+		return 0
+	case "serve":
+		if err := cli.Serve(args[1:]); err != nil {
 			fmt.Fprintf(os.Stderr, "codex2key: %v\n", err)
 			return 1
 		}
