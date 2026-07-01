@@ -5,6 +5,8 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/hdprajwal/codex2key/internal/cli"
 )
 
 // version is the CLI version string, overridable at build time with
@@ -42,7 +44,13 @@ func run(args []string) int {
 	case "--version", "version":
 		fmt.Fprintln(os.Stdout, version)
 		return 0
-	case "export", "token":
+	case "token":
+		if err := cli.Token(os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "codex2key: %v\n", err)
+			return 1
+		}
+		return 0
+	case "export":
 		fmt.Fprintf(os.Stderr, "codex2key: %q is not implemented yet\n", args[0])
 		return 1
 	default:
