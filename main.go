@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -51,8 +52,16 @@ func run(args []string) int {
 		}
 		return 0
 	case "export":
-		fmt.Fprintf(os.Stderr, "codex2key: %q is not implemented yet\n", args[0])
-		return 1
+		fs := flag.NewFlagSet("export", flag.ContinueOnError)
+		noBaseURL := fs.Bool("no-base-url", false, "omit the OPENAI_BASE_URL line")
+		if err := fs.Parse(args[1:]); err != nil {
+			return 2
+		}
+		if err := cli.Export(os.Stdout, os.Stderr, cli.ExportOptions{NoBaseURL: *noBaseURL}); err != nil {
+			fmt.Fprintf(os.Stderr, "codex2key: %v\n", err)
+			return 1
+		}
+		return 0
 	default:
 		fmt.Fprintf(os.Stderr, "codex2key: unknown command %q\n\n%s", args[0], usage)
 		return 2
