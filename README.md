@@ -4,9 +4,9 @@
 
 <div align="center">
 
-The [Codex CLI](https://github.com/openai/codex) stores a working OpenAI credential on your machine after you log in. **codexpass** reads that credential and lets your other tools use it. You can print it as shell `export` lines, grab it as a raw token, or run a small local server that lets editors like Zed use your ChatGPT subscription. No separate API key to set up.
+The [Codex CLI](https://github.com/openai/codex) stores a working OpenAI credential on your machine after you log in. **codexpass** reads that credential and lets your other tools use it. You can print shell `export` lines, grab the raw token, or run a local OpenAI-compatible server for editors, SDKs, and scripts. No separate API key to set up.
 
-[Install](#install) · [Usage](#usage) · [Local proxy](#run-a-local-openai-compatible-proxy) · [Releases](https://github.com/hdprajwal/codexpass/releases)
+[Install](#install) · [Usage](#usage) · [Local proxy](#run-a-local-openai-compatible-proxy) · [Configuration](#configuration) · [Releases](https://github.com/hdprajwal/codexpass/releases)
 
 </div>
 
@@ -59,15 +59,24 @@ Export only the key, without the base-URL override:
 eval "$(codexpass export --no-base-url)"
 ```
 
-## Run a local OpenAI-compatible proxy
-
-`codexpass serve` runs a small local server that speaks the OpenAI
-chat/completions API and forwards requests to the Codex backend. Tools that
-support `/v1/chat/completions`, like the Zed editor, can then use your Codex
-subscription.
+Check your local Codex login:
 
 ```bash
-codexpass serve --port 8080            # add --token <secret> to require a key
+codexpass doctor
+codexpass doctor --json
+codexpass doctor --live   # also checks the upstream models endpoint
+```
+
+## Run a local OpenAI-compatible proxy
+
+`codexpass serve` runs a local OpenAI-compatible server and forwards requests to
+the Codex backend. It supports `/v1/chat/completions`, `/v1/responses`,
+`/v1/models`, `/healthz`, and optional `/metrics`.
+
+```bash
+codexpass serve --port 8080
+codexpass serve --port 8080 --token local-secret
+codexpass serve --metrics --log-format json --stats-path ~/.cache/codexpass/usage.jsonl
 ```
 
 ### Zed
@@ -94,24 +103,152 @@ When Zed asks for an API key, enter the `--token` value, or any placeholder if
 you did not set one. The real Codex credential stays inside the proxy.
 
 A few caveats. Requests count against your ChatGPT subscription quota. The
-proxy only serves chat, so no embeddings, images, or audio. It is meant for
-personal, single-user use. Keep it bound to loopback (the default) and do not
-expose it to others.
+Codex backend does not serve embeddings, images, or audio; those endpoints
+return `501` unless you explicitly configure a fallback backend. The proxy is
+meant for personal, local use. Keep it bound to loopback (the default) and do
+not expose it to others.
+
+### Models
+
+List models available to your current Codex credential:
+
+```bash
+codexpass models list
+```
+
+You can also define model aliases. This lets a client ask for a local name while
+codexpass sends the real Codex model name upstream.
+
+```json
+{
+  "models": {
+    "cache_ttl_seconds": 300,
+    "aliases": {
+      "gpt-codex": "gpt-5.4"
+    }
+  }
+}
+```
+
+With this config, clients can request `gpt-codex`. codexpass forwards `gpt-5.4`
+upstream.
 
 ### Proxy compatibility
 
-The proxy accepts the common OpenAI chat/completions fields used by SDKs and
+The proxy accepts common OpenAI chat/completions fields used by SDKs and
 editors: `model`, `messages`, `stream`, `stream_options.include_usage`,
 `temperature`, `top_p`, `max_tokens`, `max_completion_tokens`,
 `reasoning_effort`, `tools`, `tool_choice`, and `response_format`. User text,
 image parts, function tools, tool results, and structured output are translated
 to the Responses API.
 
-These OpenAI fields are accepted for client compatibility but ignored by the
-Codex-backed route today: `metadata`, `user`, `n`, `presence_penalty`,
+These fields are accepted for compatibility but ignored by the Codex-backed
+route today: `metadata`, `user`, `n`, `presence_penalty`,
 `frequency_penalty`, `stop`, `logit_bias`, and `seed`. Invalid request shape,
 unsupported message roles, non-function tools, and malformed `tool_choice`
 return OpenAI-shaped `invalid_request_error` responses.
+
+`/v1/responses` is proxied too. JSON request bodies are validated, aliases are
+resolved, and `store` defaults to `false` when the client does not set it.
+
+### Client tokens and policy
+
+For one local secret, use `--token`:
+
+```bash
+codexpass serve --token local-secret
+```
+
+For multiple local clients, generate a config snippet:
+
+```bash
+codexpass token create zed
+```
+
+Client policy can restrict endpoints, models, request size, fallback use, and
+simple per-minute rate limits:
+
+```json
+{
+  "clients": {
+    "zed": {
+      "token": "generated-local-token",
+      "allowed_endpoints": ["models", "chat.completions", "responses"],
+      "allowed_models": ["gpt-codex", "gpt-5.4"],
+      "max_body_bytes": 1048576,
+      "rate_limit_per_minute": 60,
+      "allow_fallback": false
+    }
+  }
+}
+```
+
+`/healthz` stays public. When any token or client policy is configured, all
+other endpoints require a matching bearer token.
+
+### Observability
+
+Verbose logging records request metadata only:
+
+```bash
+codexpass serve --verbose
+codexpass serve --log-format json
+```
+
+Logs include route, status, latency, and client metadata. They do not include
+prompts, completions, tool arguments, Authorization headers, API keys, OAuth
+access tokens, refresh tokens, or id tokens.
+
+Enable Prometheus-style metrics:
+
+```bash
+codexpass serve --metrics
+curl http://localhost:8080/metrics
+```
+
+Write redacted usage events and summarize them later:
+
+```bash
+codexpass serve --stats-path ~/.cache/codexpass/usage.jsonl
+codexpass stats --path ~/.cache/codexpass/usage.jsonl
+```
+
+### Fallback backend
+
+Unsupported endpoints can route to a separate OpenAI-compatible backend. This
+is off by default.
+
+```json
+{
+  "fallback": {
+    "enabled": true,
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY"
+  }
+}
+```
+
+When enabled, `/v1/embeddings`, `/v1/images/generations`, `/v1/audio/speech`,
+and `/v1/audio/transcriptions` go to the fallback backend. Those requests may
+use a different quota or billing account.
+
+### Background service
+
+Install codexpass as a user-level background service:
+
+```bash
+codexpass service install --config ~/.config/codexpass/config.json
+codexpass service status
+codexpass service uninstall
+```
+
+Use `--dry-run` to print the generated systemd user unit or macOS launchd plist:
+
+```bash
+codexpass service install --dry-run
+```
+
+Service installation refuses non-loopback hosts unless you pass `--allow-network`.
 
 ## What kind of key you get
 
@@ -134,14 +271,62 @@ Codex stores credentials in one of two modes:
 | Command | Description |
 | --- | --- |
 | `codexpass export [--no-base-url]` | Print eval-able `export` lines to stdout; notes go to stderr. |
-| `codexpass token` | Print the bare token to stdout. |
-| `codexpass serve [--host H] [--port N] [--token S]` | Run a local OpenAI-compatible proxy to the Codex backend. |
+| `codexpass token` | Print the bare borrowed token to stdout. |
+| `codexpass token create NAME` | Generate a local proxy client-token config snippet. |
+| `codexpass doctor [--json] [--live]` | Inspect local Codex auth state without printing secrets. |
+| `codexpass models list` | List available models, including configured aliases. |
+| `codexpass stats --path PATH` | Summarize redacted usage JSONL. |
+| `codexpass serve [--host H] [--port N] [--token S] [--config PATH]` | Run the local OpenAI-compatible server. |
+| `codexpass service install\|uninstall\|status` | Manage a user-level background proxy service. |
 | `codexpass --version` | Print the version. |
 | `codexpass --help` | Show help. |
 
 ## Configuration
 
 - `CODEX_HOME`: override the Codex home directory. The default is `~/.codex`.
+- `CODEXPASS_CONFIG`: override the codexpass config path.
+
+The default config path is `$XDG_CONFIG_HOME/codexpass/config.json`, or
+`~/.config/codexpass/config.json` when `XDG_CONFIG_HOME` is unset. If the file
+does not exist, codexpass uses its defaults.
+
+Example:
+
+```json
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "log_format": "json",
+    "metrics": true,
+    "stats_path": "/home/me/.cache/codexpass/usage.jsonl",
+    "retry_attempts": 3
+  },
+  "models": {
+    "cache_ttl_seconds": 300,
+    "aliases": {
+      "gpt-codex": "gpt-5.4"
+    }
+  },
+  "clients": {
+    "zed": {
+      "token": "generated-local-token",
+      "allowed_endpoints": ["models", "chat.completions", "responses"],
+      "allowed_models": ["gpt-codex", "gpt-5.4"],
+      "max_body_bytes": 1048576,
+      "rate_limit_per_minute": 60,
+      "allow_fallback": false
+    }
+  },
+  "fallback": {
+    "enabled": false,
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY"
+  }
+}
+```
+
+`codexpass serve` flags override config-file server values.
 
 ## Development
 
