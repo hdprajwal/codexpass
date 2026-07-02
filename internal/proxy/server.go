@@ -19,6 +19,9 @@ type Config struct {
 	Port          int    // default 8080
 	Token         string // optional client bearer secret; empty = no client auth
 	Verbose       bool
+	LogFormat     string
+	Metrics       bool
+	StatsPath     string
 	ModelAliases  map[string]string
 	ModelCacheTTL time.Duration
 	Clients       []ClientPolicy
@@ -31,6 +34,7 @@ type Server struct {
 	upstream Upstream
 	models   ModelRegistry
 	policy   *policyEngine
+	stats    *StatsRecorder
 }
 
 // New builds a Server, applying defaults.
@@ -41,7 +45,7 @@ func New(cfg Config) *Server {
 	if cfg.Port == 0 {
 		cfg.Port = 8080
 	}
-	return &Server{cfg: cfg, borrow: codex.Borrow, models: NewModelRegistry(cfg.ModelAliases), policy: newPolicyEngine(cfg)}
+	return &Server{cfg: cfg, borrow: codex.Borrow, models: NewModelRegistry(cfg.ModelAliases), policy: newPolicyEngine(cfg), stats: NewStatsRecorder()}
 }
 
 // SetUpstream overrides the upstream backend (tests).
@@ -57,6 +61,12 @@ func (s *Server) Handler() http.Handler {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
+	if s.cfg.Metrics {
+		mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+			fmt.Fprint(w, s.stats.Metrics())
+		})
+	}
 	mux.HandleFunc("GET /v1/models", s.handleModels)
 	mux.HandleFunc("POST /v1/chat/completions", s.handleChat)
 	mux.HandleFunc("POST /v1/responses", s.handleResponsesPassthrough)
@@ -65,7 +75,7 @@ func (s *Server) Handler() http.Handler {
 			writeError(w, http.StatusNotImplemented, "not_implemented", "the Codex backend does not serve this endpoint")
 		})
 	}
-	return s.auth(mux)
+	return s.auth(s.observe(mux))
 }
 
 // auth enforces the optional client token (except /healthz) and does verbose

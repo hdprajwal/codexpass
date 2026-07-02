@@ -39,6 +39,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		writeUpstreamError(w, err)
 		return
 	}
+	s.recordUsage(r, req.Model, res.Usage)
 	writeJSON(w, http.StatusOK, toChatCompletion(req.Model, res))
 }
 
@@ -61,6 +62,9 @@ func (s *Server) handleChatStream(w http.ResponseWriter, r *http.Request, req Ch
 	}
 	st := newStreamState(req.Model, up.IncludeUsage)
 	err := s.upstream.Stream(r.Context(), up, func(e StreamEvent) error {
+		if e.Kind == "completed" && e.Usage != nil {
+			s.recordUsage(r, req.Model, *e.Usage)
+		}
 		chunks, err := st.onEvent(e)
 		if err != nil {
 			return err

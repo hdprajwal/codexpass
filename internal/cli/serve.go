@@ -18,6 +18,9 @@ func Serve(args []string) error {
 	port := fs.Int("port", 8080, "port to listen on")
 	token := fs.String("token", "", "require this bearer token from clients (optional)")
 	verbose := fs.Bool("verbose", false, "log request metadata (never secrets or content)")
+	logFormat := fs.String("log-format", "", "request log format: text or json")
+	metrics := fs.Bool("metrics", false, "enable /metrics endpoint")
+	statsPath := fs.String("stats-path", "", "write redacted usage JSONL to this path")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -43,6 +46,15 @@ func Serve(args []string) error {
 	if !visited["verbose"] {
 		*verbose = cfg.Server.Verbose
 	}
+	if !visited["log-format"] && cfg.Server.LogFormat != "" {
+		*logFormat = cfg.Server.LogFormat
+	}
+	if !visited["metrics"] {
+		*metrics = cfg.Server.Metrics
+	}
+	if !visited["stats-path"] && cfg.Server.StatsPath != "" {
+		*statsPath = cfg.Server.StatsPath
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -52,6 +64,9 @@ func Serve(args []string) error {
 		Port:          *port,
 		Token:         *token,
 		Verbose:       *verbose,
+		LogFormat:     *logFormat,
+		Metrics:       *metrics,
+		StatsPath:     *statsPath,
 		ModelAliases:  cfg.Models.Aliases,
 		ModelCacheTTL: cfg.Models.CacheTTL(),
 		Clients:       proxyClients(cfg.Clients),
