@@ -21,6 +21,7 @@ type Config struct {
 	Verbose       bool
 	ModelAliases  map[string]string
 	ModelCacheTTL time.Duration
+	Clients       []ClientPolicy
 }
 
 // Server is the OpenAI-compatible proxy.
@@ -29,6 +30,7 @@ type Server struct {
 	borrow   func() (codex.Credential, error)
 	upstream Upstream
 	models   ModelRegistry
+	policy   *policyEngine
 }
 
 // New builds a Server, applying defaults.
@@ -39,7 +41,7 @@ func New(cfg Config) *Server {
 	if cfg.Port == 0 {
 		cfg.Port = 8080
 	}
-	return &Server{cfg: cfg, borrow: codex.Borrow, models: NewModelRegistry(cfg.ModelAliases)}
+	return &Server{cfg: cfg, borrow: codex.Borrow, models: NewModelRegistry(cfg.ModelAliases), policy: newPolicyEngine(cfg)}
 }
 
 // SetUpstream overrides the upstream backend (tests).
@@ -73,11 +75,23 @@ func (s *Server) auth(next http.Handler) http.Handler {
 		if s.cfg.Verbose {
 			fmt.Fprintf(os.Stderr, "%s %s\n", r.Method, r.URL.Path)
 		}
-		if s.cfg.Token != "" && r.URL.Path != "/healthz" {
-			if r.Header.Get("Authorization") != "Bearer "+s.cfg.Token {
-				writeError(w, http.StatusUnauthorized, "authentication_error", "missing or invalid API key")
+		if r.URL.Path != "/healthz" {
+			client, status, msg := s.policy.authorize(r)
+			if status != http.StatusOK {
+				typ := "authentication_error"
+				if status == http.StatusForbidden {
+					typ = "permission_error"
+				}
+				if status == http.StatusTooManyRequests {
+					typ = "rate_limit_error"
+				}
+				if status == http.StatusRequestEntityTooLarge {
+					typ = "request_too_large"
+				}
+				writeError(w, status, typ, msg)
 				return
 			}
+			r = r.WithContext(withClient(r.Context(), client))
 		}
 		next.ServeHTTP(w, r)
 	})

@@ -54,6 +54,24 @@ func Serve(args []string) error {
 		Verbose:       *verbose,
 		ModelAliases:  cfg.Models.Aliases,
 		ModelCacheTTL: cfg.Models.CacheTTL(),
+		Clients:       proxyClients(cfg.Clients),
 	})
 	return s.ListenAndServe(ctx)
+}
+
+func proxyClients(clients config.ClientsConfig) []proxy.ClientPolicy {
+	out := make([]proxy.ClientPolicy, 0, len(clients))
+	for name, c := range clients {
+		out = append(out, proxy.ClientPolicy{
+			Name:               name,
+			Token:              c.Token,
+			AllowedEndpoints:   c.AllowedEndpoints,
+			AllowedModels:      c.AllowedModels,
+			MaxBodyBytes:       c.MaxBodyBytes,
+			RateLimitPerMinute: c.RateLimitPerMinute,
+			AllowFallback:      c.AllowFallback,
+			Disabled:           c.Disabled,
+		})
+	}
+	return out
 }

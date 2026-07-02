@@ -18,7 +18,8 @@ const usage = `codexpass - borrow the OpenAI credential from your Codex login
 
 Usage:
   codexpass export [--no-base-url]   Print eval-able shell export lines
-  codexpass token                    Print the bare token to stdout
+  codexpass token                    Print the bare borrowed token to stdout
+  codexpass token create NAME        Generate a local proxy client token
   codexpass doctor [--json] [--live] Inspect local Codex auth state
   codexpass models list              List available models and configured aliases
   codexpass serve [--port N]              Run a local OpenAI-compatible proxy
@@ -49,6 +50,17 @@ func run(args []string) int {
 		fmt.Fprintln(os.Stdout, version)
 		return 0
 	case "token":
+		if len(args) >= 2 && args[1] == "create" {
+			if len(args) != 3 {
+				fmt.Fprintln(os.Stderr, "codexpass: usage: codexpass token create NAME")
+				return 2
+			}
+			if err := cli.CreateClientToken(args[2], os.Stdout); err != nil {
+				fmt.Fprintf(os.Stderr, "codexpass: %v\n", err)
+				return 1
+			}
+			return 0
+		}
 		if err := cli.Token(os.Stdout); err != nil {
 			fmt.Fprintf(os.Stderr, "codexpass: %v\n", err)
 			return 1

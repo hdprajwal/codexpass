@@ -12,9 +12,13 @@ var passthroughHTTPClient = http.DefaultClient
 // handleResponsesPassthrough forwards a Responses-native request upstream with
 // the borrowed credential after applying local safety defaults.
 func (s *Server) handleResponsesPassthrough(w http.ResponseWriter, r *http.Request) {
-	body, err := normalizeResponsesBody(r.Body, s.models)
+	body, requestedModel, resolvedModel, err := normalizeResponsesBody(r.Body, s.models)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_request_error", err.Error())
+		return
+	}
+	if client, ok := clientFromContext(r.Context()); ok && !modelAllowed(client, requestedModel, resolvedModel) {
+		writeError(w, http.StatusForbidden, "permission_error", "client is not allowed to use this model")
 		return
 	}
 	cred, err := s.borrow()
@@ -51,21 +55,24 @@ func (s *Server) handleResponsesPassthrough(w http.ResponseWriter, r *http.Reque
 	_, _ = io.Copy(w, resp.Body)
 }
 
-func normalizeResponsesBody(r io.Reader, models ModelRegistry) ([]byte, error) {
+func normalizeResponsesBody(r io.Reader, models ModelRegistry) ([]byte, string, string, error) {
 	var payload map[string]any
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&payload); err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
 	if _, ok := payload["store"]; !ok {
 		payload["store"] = false
 	}
+	var requestedModel, resolvedModel string
 	if model, ok := payload["model"].(string); ok {
-		payload["model"] = models.Resolve(model)
+		requestedModel = model
+		resolvedModel = models.Resolve(model)
+		payload["model"] = resolvedModel
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
-	return body, nil
+	return body, requestedModel, resolvedModel, nil
 }

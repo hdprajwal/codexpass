@@ -22,7 +22,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_request_error", err.Error())
 		return
 	}
+	requestedModel := up.Model
 	up.Model = s.models.Resolve(up.Model)
+	if client, ok := clientFromContext(r.Context()); ok && !modelAllowed(client, requestedModel, up.Model) {
+		writeError(w, http.StatusForbidden, "permission_error", "client is not allowed to use this model")
+		return
+	}
 
 	if req.Stream {
 		s.handleChatStream(w, r, req, up)
