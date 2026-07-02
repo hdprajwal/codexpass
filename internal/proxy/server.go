@@ -26,6 +26,7 @@ type Config struct {
 	ModelAliases  map[string]string
 	ModelCacheTTL time.Duration
 	Clients       []ClientPolicy
+	Fallback      FallbackConfig
 }
 
 // Server is the OpenAI-compatible proxy.
@@ -72,11 +73,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/models", s.handleModels)
 	mux.HandleFunc("POST /v1/chat/completions", s.handleChat)
 	mux.HandleFunc("POST /v1/responses", s.handleResponsesPassthrough)
-	for _, p := range []string{"POST /v1/embeddings", "POST /v1/images/generations", "POST /v1/audio/speech", "POST /v1/audio/transcriptions"} {
-		mux.HandleFunc(p, func(w http.ResponseWriter, r *http.Request) {
-			writeError(w, http.StatusNotImplemented, "not_implemented", "the Codex backend does not serve this endpoint")
-		})
-	}
+	mux.HandleFunc("POST /v1/embeddings", s.handleFallback("/embeddings"))
+	mux.HandleFunc("POST /v1/images/generations", s.handleFallback("/images/generations"))
+	mux.HandleFunc("POST /v1/audio/speech", s.handleFallback("/audio/speech"))
+	mux.HandleFunc("POST /v1/audio/transcriptions", s.handleFallback("/audio/transcriptions"))
 	return s.auth(s.observe(mux))
 }
 
@@ -103,7 +103,9 @@ func (s *Server) auth(next http.Handler) http.Handler {
 				writeError(w, status, typ, msg)
 				return
 			}
-			r = r.WithContext(withClient(r.Context(), client))
+			if s.policy != nil {
+				r = r.WithContext(withClient(r.Context(), client))
+			}
 		}
 		next.ServeHTTP(w, r)
 	})

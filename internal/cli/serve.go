@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"flag"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -75,6 +76,11 @@ func Serve(args []string) error {
 		ModelAliases:  cfg.Models.Aliases,
 		ModelCacheTTL: cfg.Models.CacheTTL(),
 		Clients:       proxyClients(cfg.Clients),
+		Fallback: proxy.FallbackConfig{
+			Enabled: cfg.Fallback.Enabled,
+			BaseURL: cfg.Fallback.BaseURL,
+			APIKey:  os.Getenv(cfg.Fallback.APIKeyEnv),
+		},
 	})
 	return s.ListenAndServe(ctx)
 }
