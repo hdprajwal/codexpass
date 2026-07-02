@@ -8,6 +8,7 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadGateway, "upstream_error", err.Error())
 		return
 	}
+	models = s.models.Expose(models)
 	type model struct {
 		ID      string `json:"id"`
 		Object  string `json:"object"`

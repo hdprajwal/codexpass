@@ -15,10 +15,12 @@ import (
 
 // Config holds proxy server configuration.
 type Config struct {
-	Host    string // default 127.0.0.1
-	Port    int    // default 8080
-	Token   string // optional client bearer secret; empty = no client auth
-	Verbose bool
+	Host          string // default 127.0.0.1
+	Port          int    // default 8080
+	Token         string // optional client bearer secret; empty = no client auth
+	Verbose       bool
+	ModelAliases  map[string]string
+	ModelCacheTTL time.Duration
 }
 
 // Server is the OpenAI-compatible proxy.
@@ -26,6 +28,7 @@ type Server struct {
 	cfg      Config
 	borrow   func() (codex.Credential, error)
 	upstream Upstream
+	models   ModelRegistry
 }
 
 // New builds a Server, applying defaults.
@@ -36,11 +39,11 @@ func New(cfg Config) *Server {
 	if cfg.Port == 0 {
 		cfg.Port = 8080
 	}
-	return &Server{cfg: cfg, borrow: codex.Borrow}
+	return &Server{cfg: cfg, borrow: codex.Borrow, models: NewModelRegistry(cfg.ModelAliases)}
 }
 
 // SetUpstream overrides the upstream backend (tests).
-func (s *Server) SetUpstream(u Upstream) { s.upstream = u }
+func (s *Server) SetUpstream(u Upstream) { s.upstream = newCachedUpstream(u, s.cfg.ModelCacheTTL) }
 
 // SetBorrow overrides the credential source (tests).
 func (s *Server) SetBorrow(fn func() (codex.Credential, error)) { s.borrow = fn }
@@ -87,7 +90,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		fmt.Fprintf(os.Stderr, "warning: binding non-loopback host %q exposes your Codex credential\n", s.cfg.Host)
 	}
 	if s.upstream == nil {
-		s.upstream = newOpenAIUpstream(s.borrow)
+		s.upstream = newCachedUpstream(newOpenAIUpstream(s.borrow), s.cfg.ModelCacheTTL)
 	}
 	srv := &http.Server{Addr: addr, Handler: s.Handler()}
 	go func() {

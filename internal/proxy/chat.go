@@ -22,6 +22,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_request_error", err.Error())
 		return
 	}
+	up.Model = s.models.Resolve(up.Model)
 
 	if req.Stream {
 		s.handleChatStream(w, r, req, up)

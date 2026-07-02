@@ -272,6 +272,11 @@ func (u *openAIUpstream) Models(ctx context.Context) ([]ModelInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	return FetchModels(ctx, cred)
+}
+
+// FetchModels returns the models visible to one borrowed credential.
+func FetchModels(ctx context.Context, cred codex.Credential) ([]ModelInfo, error) {
 	if base := cred.BaseURL(); base != "" {
 		return codexModels(ctx, base, cred)
 	}

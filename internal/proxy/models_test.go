@@ -12,11 +12,12 @@ import (
 
 // fakeUpstream is a test double for Upstream.
 type fakeUpstream struct {
-	models []ModelInfo
-	result UpstreamResult
-	events []StreamEvent
-	gotReq UpstreamRequest
-	err    error
+	models     []ModelInfo
+	result     UpstreamResult
+	events     []StreamEvent
+	gotReq     UpstreamRequest
+	err        error
+	modelCalls int
 }
 
 func (f *fakeUpstream) Complete(_ context.Context, req UpstreamRequest) (UpstreamResult, error) {
@@ -32,7 +33,10 @@ func (f *fakeUpstream) Stream(_ context.Context, req UpstreamRequest, onEvent fu
 	}
 	return f.err
 }
-func (f *fakeUpstream) Models(context.Context) ([]ModelInfo, error) { return f.models, f.err }
+func (f *fakeUpstream) Models(context.Context) ([]ModelInfo, error) {
+	f.modelCalls++
+	return f.models, f.err
+}
 
 // testServer builds a Server wired to a fake upstream and a stub credential.
 func testServer(u Upstream) *Server {
