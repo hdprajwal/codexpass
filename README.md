@@ -98,6 +98,21 @@ proxy only serves chat, so no embeddings, images, or audio. It is meant for
 personal, single-user use. Keep it bound to loopback (the default) and do not
 expose it to others.
 
+### Proxy compatibility
+
+The proxy accepts the common OpenAI chat/completions fields used by SDKs and
+editors: `model`, `messages`, `stream`, `stream_options.include_usage`,
+`temperature`, `top_p`, `max_tokens`, `max_completion_tokens`,
+`reasoning_effort`, `tools`, `tool_choice`, and `response_format`. User text,
+image parts, function tools, tool results, and structured output are translated
+to the Responses API.
+
+These OpenAI fields are accepted for client compatibility but ignored by the
+Codex-backed route today: `metadata`, `user`, `n`, `presence_penalty`,
+`frequency_penalty`, `stop`, `logit_bias`, and `seed`. Invalid request shape,
+unsupported message roles, non-function tools, and malformed `tool_choice`
+return OpenAI-shaped `invalid_request_error` responses.
+
 ## What kind of key you get
 
 Codex stores credentials in one of two modes:
