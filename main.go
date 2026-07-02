@@ -23,6 +23,7 @@ Usage:
   codexpass doctor [--json] [--live] Inspect local Codex auth state
   codexpass models list              List available models and configured aliases
   codexpass stats --path PATH        Summarize redacted usage logs
+  codexpass service install          Install background local proxy service
   codexpass serve [--port N]              Run a local OpenAI-compatible proxy
   codexpass --version                Print version
   codexpass --help                   Print this help
@@ -81,6 +82,12 @@ func run(args []string) int {
 		return 0
 	case "stats":
 		if err := cli.Stats(args[1:], os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "codexpass: %v\n", err)
+			return 1
+		}
+		return 0
+	case "service":
+		if err := cli.Service(args[1:], os.Stdout); err != nil {
 			fmt.Fprintf(os.Stderr, "codexpass: %v\n", err)
 			return 1
 		}
