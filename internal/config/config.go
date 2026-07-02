@@ -19,13 +19,14 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host      string `json:"host"`
-	Port      int    `json:"port"`
-	Token     string `json:"token"`
-	Verbose   bool   `json:"verbose"`
-	LogFormat string `json:"log_format"`
-	Metrics   bool   `json:"metrics"`
-	StatsPath string `json:"stats_path"`
+	Host          string `json:"host"`
+	Port          int    `json:"port"`
+	Token         string `json:"token"`
+	Verbose       bool   `json:"verbose"`
+	LogFormat     string `json:"log_format"`
+	Metrics       bool   `json:"metrics"`
+	StatsPath     string `json:"stats_path"`
+	RetryAttempts int    `json:"retry_attempts"`
 }
 
 type ModelConfig struct {

@@ -22,6 +22,7 @@ type Config struct {
 	LogFormat     string
 	Metrics       bool
 	StatsPath     string
+	RetryAttempts int
 	ModelAliases  map[string]string
 	ModelCacheTTL time.Duration
 	Clients       []ClientPolicy
@@ -45,11 +46,12 @@ func New(cfg Config) *Server {
 	if cfg.Port == 0 {
 		cfg.Port = 8080
 	}
-	return &Server{cfg: cfg, borrow: codex.Borrow, models: NewModelRegistry(cfg.ModelAliases), policy: newPolicyEngine(cfg), stats: NewStatsRecorder()}
+	borrower := newCachedBorrower(codex.Borrow, 30*time.Second)
+	return &Server{cfg: cfg, borrow: borrower.Borrow, models: NewModelRegistry(cfg.ModelAliases), policy: newPolicyEngine(cfg), stats: NewStatsRecorder()}
 }
 
 // SetUpstream overrides the upstream backend (tests).
-func (s *Server) SetUpstream(u Upstream) { s.upstream = newCachedUpstream(u, s.cfg.ModelCacheTTL) }
+func (s *Server) SetUpstream(u Upstream) { s.upstream = s.wrapUpstream(u) }
 
 // SetBorrow overrides the credential source (tests).
 func (s *Server) SetBorrow(fn func() (codex.Credential, error)) { s.borrow = fn }
@@ -114,7 +116,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		fmt.Fprintf(os.Stderr, "warning: binding non-loopback host %q exposes your Codex credential\n", s.cfg.Host)
 	}
 	if s.upstream == nil {
-		s.upstream = newCachedUpstream(newOpenAIUpstream(s.borrow), s.cfg.ModelCacheTTL)
+		s.upstream = s.wrapUpstream(newOpenAIUpstream(s.borrow))
 	}
 	srv := &http.Server{Addr: addr, Handler: s.Handler()}
 	go func() {
@@ -128,4 +130,10 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Server) wrapUpstream(u Upstream) Upstream {
+	u = newRetryUpstream(u, RetryConfig{MaxAttempts: s.cfg.RetryAttempts})
+	u = newCachedUpstream(u, s.cfg.ModelCacheTTL)
+	return u
 }

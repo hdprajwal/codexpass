@@ -21,6 +21,7 @@ func Serve(args []string) error {
 	logFormat := fs.String("log-format", "", "request log format: text or json")
 	metrics := fs.Bool("metrics", false, "enable /metrics endpoint")
 	statsPath := fs.String("stats-path", "", "write redacted usage JSONL to this path")
+	retryAttempts := fs.Int("retry-attempts", 1, "maximum upstream attempts for retryable failures")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -55,6 +56,9 @@ func Serve(args []string) error {
 	if !visited["stats-path"] && cfg.Server.StatsPath != "" {
 		*statsPath = cfg.Server.StatsPath
 	}
+	if !visited["retry-attempts"] && cfg.Server.RetryAttempts != 0 {
+		*retryAttempts = cfg.Server.RetryAttempts
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -67,6 +71,7 @@ func Serve(args []string) error {
 		LogFormat:     *logFormat,
 		Metrics:       *metrics,
 		StatsPath:     *statsPath,
+		RetryAttempts: *retryAttempts,
 		ModelAliases:  cfg.Models.Aliases,
 		ModelCacheTTL: cfg.Models.CacheTTL(),
 		Clients:       proxyClients(cfg.Clients),
