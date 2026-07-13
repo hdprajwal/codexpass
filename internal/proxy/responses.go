@@ -9,6 +9,13 @@ import (
 
 var passthroughHTTPClient = http.DefaultClient
 
+// responsesFeatureHeaders is deliberately limited to headers that opt a
+// request into OpenAI API features. Client authentication and account headers
+// must always come from the borrowed Codex credential below.
+var responsesFeatureHeaders = []string{
+	"OpenAI-Beta",
+}
+
 // handleResponsesPassthrough forwards a Responses-native request upstream with
 // the borrowed credential after applying local safety defaults.
 func (s *Server) handleResponsesPassthrough(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +43,11 @@ func (s *Server) handleResponsesPassthrough(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	upReq.Header.Set("Content-Type", "application/json")
+	for _, name := range responsesFeatureHeaders {
+		for _, value := range r.Header.Values(name) {
+			upReq.Header.Add(name, value)
+		}
+	}
 	upReq.Header.Set("Authorization", "Bearer "+cred.APIKey)
 	if cred.AccountID != "" {
 		upReq.Header.Set("ChatGPT-Account-ID", cred.AccountID)
@@ -56,19 +68,25 @@ func (s *Server) handleResponsesPassthrough(w http.ResponseWriter, r *http.Reque
 }
 
 func normalizeResponsesBody(r io.Reader, models ModelRegistry) ([]byte, string, string, error) {
-	var payload map[string]any
+	var payload map[string]json.RawMessage
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&payload); err != nil {
 		return nil, "", "", err
 	}
 	if _, ok := payload["store"]; !ok {
-		payload["store"] = false
+		payload["store"] = json.RawMessage("false")
 	}
 	var requestedModel, resolvedModel string
-	if model, ok := payload["model"].(string); ok {
-		requestedModel = model
-		resolvedModel = models.Resolve(model)
-		payload["model"] = resolvedModel
+	if rawModel, ok := payload["model"]; ok {
+		var model string
+		if err := json.Unmarshal(rawModel, &model); err == nil {
+			requestedModel = model
+			resolvedModel = models.Resolve(model)
+			payload["model"], err = json.Marshal(resolvedModel)
+			if err != nil {
+				return nil, "", "", err
+			}
+		}
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
