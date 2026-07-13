@@ -21,11 +21,13 @@ func TestResponsesProxyDefaultsStoreAndResolvesAlias(t *testing.T) {
 	old := passthroughHTTPClient
 	defer func() { passthroughHTTPClient = old }()
 	var gotBody map[string]any
-	var gotAuth, gotAccount string
+	var gotAuth, gotAccount, gotOriginator, gotUserAgent string
 	var gotBeta []string
 	passthroughHTTPClient = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		gotAuth = r.Header.Get("Authorization")
 		gotAccount = r.Header.Get("ChatGPT-Account-ID")
+		gotOriginator = r.Header.Get("Originator")
+		gotUserAgent = r.Header.Get("User-Agent")
 		gotBeta = r.Header.Values("OpenAI-Beta")
 		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 			t.Fatal(err)
@@ -46,6 +48,8 @@ func TestResponsesProxyDefaultsStoreAndResolvesAlias(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"model":"gpt-local","input":"hi"}`))
 	req.Header.Set("Authorization", "Bearer client-token-that-must-not-be-forwarded")
 	req.Header.Set("ChatGPT-Account-ID", "client-account-that-must-not-be-forwarded")
+	req.Header.Set("Originator", "untrusted-client")
+	req.Header.Set("User-Agent", "untrusted-client/1.0")
 	req.Header.Add("OpenAI-Beta", "responses_multi_agent=v1")
 	s.Handler().ServeHTTP(rec, req)
 
@@ -54,6 +58,9 @@ func TestResponsesProxyDefaultsStoreAndResolvesAlias(t *testing.T) {
 	}
 	if gotAuth != "Bearer access-token" || gotAccount != "acct" {
 		t.Fatalf("headers auth=%q account=%q", gotAuth, gotAccount)
+	}
+	if gotOriginator != codex.CodexOriginator || gotUserAgent != codex.CodexUserAgent {
+		t.Fatalf("Codex identity headers originator=%q user-agent=%q", gotOriginator, gotUserAgent)
 	}
 	if len(gotBeta) != 1 || gotBeta[0] != "responses_multi_agent=v1" {
 		t.Fatalf("OpenAI-Beta headers = %q", gotBeta)

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"github.com/hdprajwal/codexpass/internal/codex"
 )
 
 var passthroughHTTPClient = http.DefaultClient
@@ -51,6 +53,10 @@ func (s *Server) handleResponsesPassthrough(w http.ResponseWriter, r *http.Reque
 	upReq.Header.Set("Authorization", "Bearer "+cred.APIKey)
 	if cred.AccountID != "" {
 		upReq.Header.Set("ChatGPT-Account-ID", cred.AccountID)
+	}
+	if cred.BaseURL() != "" {
+		upReq.Header.Set("Originator", codex.CodexOriginator)
+		upReq.Header.Set("User-Agent", codex.CodexUserAgent)
 	}
 	resp, err := passthroughHTTPClient.Do(upReq)
 	if err != nil {

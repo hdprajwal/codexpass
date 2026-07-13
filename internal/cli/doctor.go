@@ -120,13 +120,17 @@ func probeLiveModels(ctx context.Context) liveReport {
 	}
 	url := base + "/models"
 	if cred.BaseURL() != "" {
-		url += "?client_version=1.0.0"
+		url += "?client_version=" + codex.CodexClientVersion
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return liveReport{Checked: true, OK: false, Error: err.Error()}
 	}
 	req.Header.Set("Authorization", "Bearer "+cred.APIKey)
+	if cred.BaseURL() != "" {
+		req.Header.Set("Originator", codex.CodexOriginator)
+		req.Header.Set("User-Agent", codex.CodexUserAgent)
+	}
 	if cred.AccountID != "" {
 		req.Header.Set("ChatGPT-Account-ID", cred.AccountID)
 	}

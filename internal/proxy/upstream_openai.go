@@ -38,7 +38,11 @@ func (u *openAIUpstream) client() (openai.Client, codex.Credential, error) {
 	}
 	opts := []option.RequestOption{option.WithAPIKey(cred.APIKey)}
 	if base := cred.BaseURL(); base != "" {
-		opts = append(opts, option.WithBaseURL(base))
+		opts = append(opts,
+			option.WithBaseURL(base),
+			option.WithHeader("Originator", codex.CodexOriginator),
+			option.WithHeader("User-Agent", codex.CodexUserAgent),
+		)
 	}
 	if cred.AccountID != "" {
 		opts = append(opts, option.WithHeader("ChatGPT-Account-ID", cred.AccountID))
@@ -289,11 +293,13 @@ func FetchModels(ctx context.Context, cred codex.Credential) ([]ModelInfo, error
 // codexModels queries the Codex-specific /models endpoint (not exposed by the
 // SDK) and keeps only the models usable through the API.
 func codexModels(ctx context.Context, base string, cred codex.Credential) ([]ModelInfo, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/models?client_version=1.0.0", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/models?client_version="+codex.CodexClientVersion, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+cred.APIKey)
+	req.Header.Set("Originator", codex.CodexOriginator)
+	req.Header.Set("User-Agent", codex.CodexUserAgent)
 	if cred.AccountID != "" {
 		req.Header.Set("ChatGPT-Account-ID", cred.AccountID)
 	}
