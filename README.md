@@ -91,7 +91,10 @@ the current docs):
       "Codex": {
         "api_url": "http://localhost:8080/v1",
         "available_models": [
-          { "name": "gpt-5.4", "display_name": "GPT-5.4 (Codex)", "max_tokens": 128000 }
+          { "name": "gpt-5.6", "display_name": "GPT-5.6 Sol (Codex)", "max_tokens": 1050000 },
+          { "name": "gpt-5.6-sol", "display_name": "GPT-5.6 Sol (Codex, explicit)", "max_tokens": 1050000 },
+          { "name": "gpt-5.6-terra", "display_name": "GPT-5.6 Terra (Codex)", "max_tokens": 1050000 },
+          { "name": "gpt-5.6-luna", "display_name": "GPT-5.6 Luna (Codex)", "max_tokens": 1050000 }
         ]
       }
     }
@@ -116,6 +119,12 @@ List models available to your current Codex credential:
 codexpass models list
 ```
 
+GPT-5.6 has three tiers: `gpt-5.6-sol` for frontier capability,
+`gpt-5.6-terra` for a balance of intelligence and cost, and `gpt-5.6-luna`
+for efficient high-volume work. When Sol is available, codexpass also exposes
+OpenAI's official `gpt-5.6` alias and resolves it to `gpt-5.6-sol` if the
+upstream model catalog does not already provide the alias.
+
 You can also define model aliases. This lets a client ask for a local name while
 codexpass sends the real Codex model name upstream.
 
@@ -124,23 +133,24 @@ codexpass sends the real Codex model name upstream.
   "models": {
     "cache_ttl_seconds": 300,
     "aliases": {
-      "gpt-codex": "gpt-5.4"
+      "gpt-codex": "gpt-5.6-sol"
     }
   }
 }
 ```
 
-With this config, clients can request `gpt-codex`. codexpass forwards `gpt-5.4`
-upstream.
+With this config, clients can request `gpt-codex`. codexpass forwards
+`gpt-5.6-sol` upstream.
 
 ### Proxy compatibility
 
 The proxy accepts common OpenAI chat/completions fields used by SDKs and
 editors: `model`, `messages`, `stream`, `stream_options.include_usage`,
 `temperature`, `top_p`, `max_tokens`, `max_completion_tokens`,
-`reasoning_effort`, `tools`, `tool_choice`, and `response_format`. User text,
-image parts, function tools, tool results, and structured output are translated
-to the Responses API.
+`reasoning_effort`, `safety_identifier`, `tools`, `tool_choice`, and
+`response_format`. GPT-5.6 reasoning efforts through `max` and image detail
+values including `original` are preserved. User text, image parts, function
+tools, tool results, and structured output are translated to the Responses API.
 
 These fields are accepted for compatibility but ignored by the Codex-backed
 route today: `metadata`, `user`, `n`, `presence_penalty`,
@@ -148,8 +158,13 @@ route today: `metadata`, `user`, `n`, `presence_penalty`,
 unsupported message roles, non-function tools, and malformed `tool_choice`
 return OpenAI-shaped `invalid_request_error` responses.
 
-`/v1/responses` is proxied too. JSON request bodies are validated, aliases are
-resolved, and `store` defaults to `false` when the client does not set it.
+`/v1/responses` is proxied too. JSON request bodies are validated without
+rewriting unknown fields, aliases are resolved, and `store` defaults to `false`
+when the client does not set it. GPT-5.6 features such as Pro mode, persisted
+reasoning, explicit prompt caching, and Programmatic Tool Calling should use
+this endpoint. The `OpenAI-Beta` request header is forwarded for opt-in features
+such as the multi-agent beta; client-supplied authorization and account headers
+are never forwarded upstream.
 
 ### Client tokens and policy
 
@@ -174,7 +189,7 @@ simple per-minute rate limits:
     "zed": {
       "token": "generated-local-token",
       "allowed_endpoints": ["models", "chat.completions", "responses"],
-      "allowed_models": ["gpt-codex", "gpt-5.4"],
+      "allowed_models": ["gpt-codex", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
       "max_body_bytes": 1048576,
       "rate_limit_per_minute": 60,
       "allow_fallback": false
@@ -305,14 +320,14 @@ Example:
   "models": {
     "cache_ttl_seconds": 300,
     "aliases": {
-      "gpt-codex": "gpt-5.4"
+      "gpt-codex": "gpt-5.6-sol"
     }
   },
   "clients": {
     "zed": {
       "token": "generated-local-token",
       "allowed_endpoints": ["models", "chat.completions", "responses"],
-      "allowed_models": ["gpt-codex", "gpt-5.4"],
+      "allowed_models": ["gpt-codex", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
       "max_body_bytes": 1048576,
       "rate_limit_per_minute": 60,
       "allow_fallback": false
