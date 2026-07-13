@@ -1,5 +1,11 @@
 <p align="center">
-  <picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/header/graph.svg?title=codexpass&amp;subtitle=Use+your+Codex+login+anywhere&amp;logo=openai&amp;logoColor=848484&amp;mode=dark&amp;align=left&amp;font=geist-mono&amp;border=false" /><img alt="codexpass" src="https://shieldcn.dev/header/graph.svg?title=codexpass&amp;subtitle=Use+your+Codex+login+anywhere&amp;logo=openai&amp;logoColor=848484&amp;mode=light&amp;align=left&amp;font=geist-mono&amp;border=false" /></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="https://gh-widgets.hdprajwal.dev/header/graph.svg?title=codexpass&amp;subtitle=Use+your+Codex+login+anywhere&amp;logo=openai&amp;logoColor=848484&amp;mode=dark&amp;align=left&amp;font=geist-mono&amp;border=false" /><img alt="codexpass" src="https://gh-widgets.hdprajwal.dev/header/graph.svg?title=codexpass&amp;subtitle=Use+your+Codex+login+anywhere&amp;logo=openai&amp;logoColor=848484&amp;mode=light&amp;align=left&amp;font=geist-mono&amp;border=false" /></picture>
+</p>
+
+<p align="center">
+  <a href="https://github.com/hdprajwal/codexpass/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="https://gh-widgets.hdprajwal.dev/github/release.svg?repo=hdprajwal/codexpass&amp;mode=dark" /><img alt="latest release" src="https://gh-widgets.hdprajwal.dev/github/release.svg?repo=hdprajwal/codexpass&amp;mode=light" /></picture></a>
+  <a href="https://github.com/hdprajwal/codexpass/blob/main/LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://gh-widgets.hdprajwal.dev/github/license.svg?repo=hdprajwal/codexpass&amp;mode=dark" /><img alt="license" src="https://gh-widgets.hdprajwal.dev/github/license.svg?repo=hdprajwal/codexpass&amp;mode=light" /></picture></a>
+  <a href="https://go.dev"><picture><source media="(prefers-color-scheme: dark)" srcset="https://gh-widgets.hdprajwal.dev/badge/static.svg?label=built+with&amp;message=go&amp;logo=go&amp;logoColor=00add8&amp;color=00add8&amp;mode=dark" /><img alt="built with go" src="https://gh-widgets.hdprajwal.dev/badge/static.svg?label=built+with&amp;message=go&amp;logo=go&amp;logoColor=00add8&amp;color=00add8&amp;mode=light" /></picture></a>
 </p>
 
 <div align="center">
