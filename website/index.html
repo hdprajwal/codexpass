@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="theme-color" content="#000000" />
+	<meta name="description" content="codexpass reads the credential the Codex CLI stores after login and lets your other tools use it — shell exports, raw tokens, or a local OpenAI-compatible proxy." />
+	<meta property="og:site_name" content="codexpass" />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="codexpass — use your Codex login anywhere" />
+	<meta property="og:description" content="Shell exports, raw tokens, or a local OpenAI-compatible proxy — all from the credential Codex already saved. No separate API key to set up." />
+	<meta property="og:url" content="https://codexpass.hdprajwal.dev/" />
+	<meta property="og:image" content="https://codexpass.hdprajwal.dev/og.png" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image:alt" content="codexpass — use your Codex login anywhere. A terminal showing: codexpass serve --port 8080" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="codexpass — use your Codex login anywhere" />
+	<meta name="twitter:description" content="Shell exports, raw tokens, or a local OpenAI-compatible proxy — all from the credential Codex already saved. No separate API key to set up." />
+	<meta name="twitter:image" content="https://codexpass.hdprajwal.dev/og.png" />
+	<title>codexpass — use your Codex login anywhere</title>
+	<link rel="icon" href="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23ededed'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3e%3crect%20width='18'%20height='18'%20x='3'%20y='3'%20rx='2'%20fill='%23000000'/%3e%3cpath%20d='m10%208%204%204-4%204'/%3e%3c/svg%3e" />
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+	<style>
+		:root {
+			--bg: #000000;
+			--ink: #ededed;
+			--ink-muted: #a0a0a0;
+			--ink-subtle: #8f8f8f;
+			--ink-faint: #7d7d7d;
+			--line: #1f1f1f;
+			--surface: #0e0e0e;
+			--accent: #47a8ff;
+		}
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		html { -webkit-text-size-adjust: 100%; }
+		body {
+			background: var(--bg);
+			color: var(--ink-muted);
+			font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+			font-size: 16px;
+			line-height: 1.625;
+			font-feature-settings: 'ss01';
+		}
+		nav {
+			max-width: 896px;
+			margin: 0 auto;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 16px 20px;
+			font-family: 'Geist Mono', ui-monospace, monospace;
+			font-size: 12px;
+		}
+		nav .brand { font-weight: 600; color: var(--ink); text-decoration: none; padding: 8px; transition: opacity 0.15s; }
+		nav .brand:hover { opacity: 0.8; }
+		nav .links { display: flex; align-items: center; gap: 20px; }
+		nav .links a { color: var(--ink-subtle); text-decoration: none; transition: color 0.15s; }
+		nav .links a:hover { color: var(--ink); }
+		nav .links svg { display: block; }
+		main {
+			max-width: 672px;
+			margin: 0 auto;
+			padding: 64px 20px 96px;
+		}
+		h1 {
+			font-size: 28px;
+			font-weight: 600;
+			letter-spacing: -0.03em;
+			color: var(--ink);
+		}
+		.lede { margin-top: 12px; line-height: 1.625; color: var(--ink-muted); }
+		h2 {
+			margin-top: 48px;
+			font-size: 15px;
+			font-weight: 600;
+			color: var(--ink);
+		}
+		h3 {
+			margin-top: 32px;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--ink);
+		}
+		p {
+			margin-top: 8px;
+			font-size: 14px;
+			line-height: 1.625;
+			color: var(--ink-muted);
+		}
+		p + p { margin-top: 12px; }
+		.ink, strong { color: var(--ink); font-weight: 400; }
+		a { color: var(--accent); text-decoration: none; }
+		a:hover { text-decoration: underline; }
+		code {
+			font-family: 'Geist Mono', ui-monospace, monospace;
+			font-size: 0.92em;
+			color: var(--ink);
+		}
+		pre {
+			margin-top: 12px;
+			overflow-x: auto;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			background: var(--surface);
+			padding: 16px;
+			font-family: 'Geist Mono', ui-monospace, monospace;
+			font-size: 12px;
+			line-height: 1.625;
+			color: var(--ink-muted);
+		}
+		pre code { font-size: 12px; color: inherit; }
+		pre .c { color: var(--ink-faint); }
+		pre .k { color: var(--ink); }
+		.table-wrap {
+			margin-top: 12px;
+			overflow-x: auto;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-family: 'Geist Mono', ui-monospace, monospace;
+			font-size: 12px;
+			color: var(--ink-muted);
+		}
+		tr { border-bottom: 1px solid var(--line); }
+		tr:last-child { border-bottom: 0; }
+		td { padding: 8px 12px; vertical-align: top; }
+		td.cmd { white-space: nowrap; color: var(--ink); }
+		td.desc { color: var(--ink-faint); font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 12.5px; }
+		td.mode { white-space: nowrap; color: var(--accent); width: 88px; }
+		ul { margin-top: 8px; padding-left: 20px; font-size: 14px; line-height: 1.625; color: var(--ink-muted); }
+		li { margin-top: 6px; }
+		footer {
+			max-width: 896px;
+			margin: 0 auto;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			border-top: 1px solid var(--line);
+			padding: 24px 20px 48px;
+			font-family: 'Geist Mono', ui-monospace, monospace;
+			font-size: 12px;
+			color: var(--ink-subtle);
+		}
+		footer a { color: var(--ink-subtle); }
+		footer a:hover { color: var(--ink); text-decoration: none; }
+		details.dl {
+			margin-top: 12px;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			background: var(--surface);
+			font-family: 'Geist Mono', ui-monospace, monospace;
+			font-size: 12px;
+		}
+		details.dl summary {
+			padding: 12px 16px;
+			cursor: pointer;
+			color: var(--ink);
+			list-style: none;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			user-select: none;
+		}
+		details.dl summary::-webkit-details-marker { display: none; }
+		details.dl summary::after { content: '+'; color: var(--ink-subtle); }
+		details.dl[open] summary { border-bottom: 1px solid var(--line); }
+		details.dl[open] summary::after { content: '−'; }
+		details.dl .dl-row {
+			display: flex;
+			align-items: baseline;
+			justify-content: space-between;
+			gap: 12px;
+			padding: 8px 16px;
+			border-bottom: 1px solid var(--line);
+			color: var(--ink-muted);
+		}
+		details.dl .dl-row:last-child { border-bottom: 0; }
+		details.dl .dl-row .platform { color: var(--ink); white-space: nowrap; }
+		details.dl .dl-row .meta { color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: right; }
+		details.dl .dl-row .detected { color: var(--accent); }
+		details.dl .dl-row a { white-space: nowrap; }
+		details.dl .dl-status { padding: 12px 16px; color: var(--ink-faint); }
+	</style>
+</head>
+<body>
+	<nav>
+		<a class="brand" href="#">codexpass</a>
+		<div class="links">
+			<a href="https://github.com/hdprajwal/codexpass/releases">Releases</a>
+			<a href="https://github.com/hdprajwal/codexpass" target="_blank" rel="noopener" aria-label="codexpass on GitHub">
+				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+			</a>
+		</div>
+	</nav>
+
+	<main>
+		<h1>codexpass</h1>
+		<p class="lede">
+			Use your Codex login anywhere. The <a href="https://github.com/openai/codex" target="_blank" rel="noopener">Codex CLI</a>
+			stores a working OpenAI credential on your machine after you log in.
+			<span class="ink">codexpass</span> reads that credential and lets your other tools
+			use it — print shell <code>export</code> lines, grab the raw token, or run a local
+			OpenAI-compatible server for editors, SDKs, and scripts. No separate API key to set up.
+		</p>
+
+		<h2>How it works</h2>
+		<p>
+			After <code>codex login</code>, the Codex CLI saves a credential in
+			<code>~/.codex/auth.json</code>. codexpass reads that file. If the token has expired,
+			it refreshes it with the stored refresh token and writes the new token back safely
+			with <code>0600</code> file permissions. Then it hands you the credential in the
+			shape you need.
+		</p>
+
+		<h2>Install</h2>
+		<p>
+			Download a prebuilt binary for Linux, macOS, or Windows from the
+			<a href="https://github.com/hdprajwal/codexpass/releases/latest">latest release</a>:
+		</p>
+		<details class="dl" id="dl">
+			<summary>Download the latest release</summary>
+			<div class="dl-status" id="dl-status">Loading…</div>
+			<div id="dl-list"></div>
+		</details>
+		<p>Or install with Go:</p>
+		<pre><code>go install github.com/hdprajwal/codexpass@latest</code></pre>
+		<p>Or build from source:</p>
+		<pre><code>git clone https://github.com/hdprajwal/codexpass
+cd codexpass
+make build   <span class="c"># produces ./codexpass</span></code></pre>
+
+		<h2>Usage</h2>
+		<p>Load the credential into your current shell session:</p>
+		<pre><code>eval "$(codexpass export)"</code></pre>
+		<p>
+			Now <code>OPENAI_API_KEY</code> (and, in ChatGPT mode, <code>OPENAI_BASE_URL</code>)
+			are set for every tool you run in that session.
+		</p>
+		<pre><code><span class="c"># bare token for a script</span>
+KEY=$(codexpass token)
+
+<span class="c"># key only, without the base-URL override</span>
+eval "$(codexpass export --no-base-url)"
+
+<span class="c"># check your local Codex login</span>
+codexpass doctor
+codexpass doctor --json
+codexpass doctor --live   <span class="c"># also checks the upstream models endpoint</span></code></pre>
+
+		<h2>Local OpenAI-compatible proxy</h2>
+		<p>
+			<code>codexpass serve</code> runs a local OpenAI-compatible server and forwards
+			requests to the Codex backend. It supports <code>/v1/chat/completions</code>,
+			<code>/v1/responses</code>, <code>/v1/models</code>, <code>/healthz</code>, and
+			optional <code>/metrics</code>.
+		</p>
+		<pre><code>codexpass serve --port 8080
+codexpass serve --port 8080 --token local-secret
+codexpass serve --metrics --log-format json \
+  --stats-path ~/.cache/codexpass/usage.jsonl</code></pre>
+		<p>
+			Point any OpenAI-compatible editor or SDK at
+			<code>http://localhost:8080/v1</code>. When the client asks for an API key, enter
+			the <code>--token</code> value, or any placeholder if you did not set one. The real
+			Codex credential stays inside the proxy.
+		</p>
+		<p>
+			A few caveats. Requests count against your ChatGPT subscription quota. The Codex
+			backend does not serve embeddings, images, or audio; those endpoints return
+			<code>501</code> unless you configure a fallback backend. The proxy is meant for
+			personal, local use — keep it bound to loopback (the default) and do not expose it
+			to others.
+		</p>
+
+		<h3>Zed</h3>
+		<p>In Zed <code>settings.json</code>:</p>
+		<pre><code>{
+  "language_models": {
+    "openai_compatible": {
+      "Codex": {
+        "api_url": "http://localhost:8080/v1",
+        "available_models": [
+          { "name": "gpt-5.6", "display_name": "GPT-5.6 Sol (Codex)", "max_tokens": 272000 },
+          { "name": "gpt-5.6-terra", "display_name": "GPT-5.6 Terra (Codex)", "max_tokens": 272000 },
+          { "name": "gpt-5.6-luna", "display_name": "GPT-5.6 Luna (Codex)", "max_tokens": 272000 }
+        ]
+      }
+    }
+  }
+}</code></pre>
+
+		<h3>Models</h3>
+		<p>
+			GPT-5.6 has three tiers: <span class="ink">gpt-5.6-sol</span> for frontier
+			capability, <span class="ink">gpt-5.6-terra</span> for a balance of intelligence
+			and cost, and <span class="ink">gpt-5.6-luna</span> for efficient high-volume work.
+			When Sol is available, codexpass also exposes the official <code>gpt-5.6</code>
+			alias. List what your credential can reach:
+		</p>
+		<pre><code>codexpass models list</code></pre>
+		<p>
+			You can also define model aliases, so a client asks for a local name while
+			codexpass sends the real Codex model name upstream:
+		</p>
+		<pre><code>{
+  "models": {
+    "cache_ttl_seconds": 300,
+    "aliases": { "gpt-codex": "gpt-5.6-sol" }
+  }
+}</code></pre>
+
+		<h3>Client tokens and policy</h3>
+		<p>
+			For one local secret, use <code>--token</code>. For multiple local clients,
+			generate a config snippet with <code>codexpass token create NAME</code>. Client
+			policy can restrict endpoints, models, request size, fallback use, and per-minute
+			rate limits. <code>/healthz</code> stays public; when any token or client policy
+			is configured, all other endpoints require a matching bearer token.
+		</p>
+
+		<h3>Observability</h3>
+		<p>
+			Verbose logging records request metadata only — route, status, latency, client.
+			Never prompts, completions, tool arguments, or any token or key. Enable
+			Prometheus-style metrics with <code>--metrics</code>, or write redacted usage
+			events and summarize them later:
+		</p>
+		<pre><code>codexpass serve --stats-path ~/.cache/codexpass/usage.jsonl
+codexpass stats --path ~/.cache/codexpass/usage.jsonl</code></pre>
+
+		<h3>Background service</h3>
+		<p>
+			Install codexpass as a user-level background service (systemd user unit on Linux,
+			launchd plist on macOS). Installation refuses non-loopback hosts unless you pass
+			<code>--allow-network</code>.
+		</p>
+		<pre><code>codexpass service install --config ~/.config/codexpass/config.json
+codexpass service status
+codexpass service uninstall</code></pre>
+
+		<h2>What kind of key you get</h2>
+		<ul>
+			<li>
+				<span class="ink">chatgpt mode</span> — you logged in with a ChatGPT
+				subscription. The borrowed value is a ChatGPT OAuth access token, not a normal
+				<code>sk-...</code> key. It only works against the Codex backend, so
+				<code>codexpass export</code> also sets
+				<code>OPENAI_BASE_URL=https://chatgpt.com/backend-api/codex</code>, and you use
+				Codex model names (<code>gpt-5.x</code>).
+			</li>
+			<li>
+				<span class="ink">apikey mode</span> — you logged in with an API key. The
+				borrowed value is a real OpenAI API key that works against
+				<code>api.openai.com</code>. codexpass exports just <code>OPENAI_API_KEY</code>
+				and leaves the base URL alone.
+			</li>
+		</ul>
+
+		<h2>Commands</h2>
+		<div class="table-wrap">
+			<table>
+				<tbody>
+					<tr><td class="cmd">codexpass export</td><td class="desc">Print eval-able export lines to stdout; notes go to stderr</td></tr>
+					<tr><td class="cmd">codexpass token</td><td class="desc">Print the bare borrowed token to stdout</td></tr>
+					<tr><td class="cmd">codexpass token create NAME</td><td class="desc">Generate a local proxy client-token config snippet</td></tr>
+					<tr><td class="cmd">codexpass doctor</td><td class="desc">Inspect local Codex auth state without printing secrets</td></tr>
+					<tr><td class="cmd">codexpass models list</td><td class="desc">List available models, including configured aliases</td></tr>
+					<tr><td class="cmd">codexpass stats</td><td class="desc">Summarize redacted usage JSONL</td></tr>
+					<tr><td class="cmd">codexpass serve</td><td class="desc">Run the local OpenAI-compatible server</td></tr>
+					<tr><td class="cmd">codexpass service</td><td class="desc">Install, uninstall, or check the background proxy service</td></tr>
+				</tbody>
+			</table>
+		</div>
+
+		<h2>Configuration</h2>
+		<p>
+			<code>CODEX_HOME</code> overrides the Codex home directory (default
+			<code>~/.codex</code>). <code>CODEXPASS_CONFIG</code> overrides the codexpass
+			config path (default <code>~/.config/codexpass/config.json</code>). If the file
+			does not exist, codexpass uses its defaults; <code>codexpass serve</code> flags
+			override config-file server values.
+		</p>
+		<pre><code>{
+  "server": { "host": "127.0.0.1", "port": 8080, "metrics": true },
+  "models": {
+    "aliases": { "gpt-codex": "gpt-5.6-sol" }
+  },
+  "fallback": {
+    "enabled": false,
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY"
+  }
+}</code></pre>
+
+		<h2>Credits</h2>
+		<p>
+			The credential-borrowing and token-refresh logic is ported from Simon Willison's
+			<a href="https://github.com/simonw/llm-openai-via-codex" target="_blank" rel="noopener">llm-openai-via-codex</a>.
+		</p>
+
+	</main>
+
+	<footer>
+		<a href="https://github.com/hdprajwal/codexpass/blob/main/LICENSE">Apache-2.0</a>
+		<span>built by <a href="https://hdprajwal.dev" target="_blank" rel="noopener">Prajwal HD</a></span>
+	</footer>
+
+	<script>
+	(function () {
+		var REPO = 'hdprajwal/codexpass';
+		var details = document.getElementById('dl');
+		var status = document.getElementById('dl-status');
+		var list = document.getElementById('dl-list');
+		var loaded = false;
+
+		function detectPlatform() {
+			var ua = navigator.userAgent;
+			if (/Windows/i.test(ua)) return { os: 'windows', arch: 'amd64' };
+			if (/Mac/i.test(ua)) return { os: 'darwin', arch: 'arm64' };
+			if (/Linux/i.test(ua)) return { os: 'linux', arch: 'amd64' };
+			return null;
+		}
+
+		function label(os, arch) {
+			var osName = { darwin: 'macOS', linux: 'Linux', windows: 'Windows' }[os] || os;
+			var archName = arch === 'arm64'
+				? (os === 'darwin' ? 'Apple Silicon' : 'ARM64')
+				: (os === 'darwin' ? 'Intel' : 'x86-64');
+			return osName + ' · ' + archName;
+		}
+
+		function fmtSize(bytes) {
+			return (bytes / 1048576).toFixed(1) + ' MB';
+		}
+
+		function render(release) {
+			var mine = detectPlatform();
+			var rows = [];
+			release.assets.forEach(function (a) {
+				var m = a.name.match(/_(darwin|linux|windows)_(amd64|arm64)\.(tar\.gz|zip)$/);
+				if (!m) return;
+				rows.push({
+					os: m[1], arch: m[2], name: a.name,
+					size: a.size, url: a.browser_download_url,
+					detected: !!(mine && mine.os === m[1] && mine.arch === m[2])
+				});
+			});
+			if (!rows.length) {
+				status.innerHTML = 'No binaries found — see the <a href="https://github.com/' + REPO + '/releases/latest">releases page</a>.';
+				return;
+			}
+			rows.sort(function (a, b) { return (b.detected - a.detected) || a.name.localeCompare(b.name); });
+			status.textContent = release.tag_name;
+			rows.forEach(function (r) {
+				var row = document.createElement('div');
+				row.className = 'dl-row';
+				var plat = document.createElement('span');
+				plat.className = 'platform';
+				plat.textContent = label(r.os, r.arch);
+				if (r.detected) {
+					var tag = document.createElement('span');
+					tag.className = 'detected';
+					tag.textContent = ' · detected';
+					plat.appendChild(tag);
+				}
+				var meta = document.createElement('span');
+				meta.className = 'meta';
+				meta.textContent = r.name + ' · ' + fmtSize(r.size);
+				var link = document.createElement('a');
+				link.href = r.url;
+				link.textContent = 'download';
+				row.appendChild(plat);
+				row.appendChild(meta);
+				row.appendChild(link);
+				list.appendChild(row);
+			});
+		}
+
+		details.addEventListener('toggle', function () {
+			if (!details.open || loaded) return;
+			loaded = true;
+			fetch('https://api.github.com/repos/' + REPO + '/releases/latest')
+				.then(function (res) {
+					if (!res.ok) throw new Error(res.status);
+					return res.json();
+				})
+				.then(render)
+				.catch(function () {
+					status.innerHTML = 'Could not reach the GitHub API — grab a binary from the <a href="https://github.com/' + REPO + '/releases/latest">releases page</a>.';
+				});
+		});
+	})();
+	</script>
+</body>
+</html>

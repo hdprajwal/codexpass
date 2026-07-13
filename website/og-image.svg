@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="codexpass — Use your Codex login anywhere">
+  <defs>
+    <clipPath id="ogClip"><rect x="0" y="0" width="1200" height="630" /></clipPath>
+    <pattern id="gridFine" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1" /></pattern>
+    <pattern id="gridCoarse" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0H0V100" fill="none" stroke="rgba(255,255,255,0.055)" stroke-width="1" /></pattern>
+    <radialGradient id="glow" cx="50%" cy="0%" r="90%">
+      <stop offset="0%" stop-color="rgba(71,168,255,0.07)" />
+      <stop offset="60%" stop-color="rgba(71,168,255,0)" />
+    </radialGradient>
+  </defs>
+  <g clip-path="url(#ogClip)" font-family="'Geist Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">
+    <rect x="0" y="0" width="1200" height="630" fill="#000000" />
+    <rect x="0" y="0" width="1200" height="630" fill="url(#gridFine)" />
+    <rect x="0" y="0" width="1200" height="630" fill="url(#gridCoarse)" />
+    <rect x="0" y="0" width="1200" height="630" fill="url(#glow)" />
+
+    <!-- wordmark with cursor block -->
+    <text x="100" y="238" font-size="76" font-weight="700" fill="#ededed" letter-spacing="-0.03em">codexpass</text>
+    <rect x="548" y="180" width="30" height="62" fill="#47a8ff" />
+
+    <!-- subtitle -->
+    <text x="100" y="308" font-size="30" font-weight="400" fill="#a0a0a0">Use your Codex login anywhere</text>
+
+    <!-- terminal card -->
+    <rect x="100" y="368" width="1000" height="120" rx="10" fill="#0e0e0e" stroke="#1f1f1f" stroke-width="2" />
+    <text x="136" y="420" font-size="24" fill="#7d7d7d"># no separate API key to set up</text>
+    <text x="136" y="460" font-size="24"><tspan fill="#47a8ff">$</tspan><tspan fill="#ededed" dx="14">codexpass serve --port 8080</tspan></text>
+
+    <!-- footer -->
+    <text x="100" y="560" font-size="20" fill="#8f8f8f">codexpass.hdprajwal.dev</text>
+    <text x="1100" y="560" text-anchor="end" font-size="20" fill="#8f8f8f">shell exports · raw tokens · local OpenAI-compatible proxy</text>
+  </g>
+</svg>
