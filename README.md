@@ -91,10 +91,10 @@ the current docs):
       "Codex": {
         "api_url": "http://localhost:8080/v1",
         "available_models": [
-          { "name": "gpt-5.6", "display_name": "GPT-5.6 Sol (Codex)", "max_tokens": 1050000 },
-          { "name": "gpt-5.6-sol", "display_name": "GPT-5.6 Sol (Codex, explicit)", "max_tokens": 1050000 },
-          { "name": "gpt-5.6-terra", "display_name": "GPT-5.6 Terra (Codex)", "max_tokens": 1050000 },
-          { "name": "gpt-5.6-luna", "display_name": "GPT-5.6 Luna (Codex)", "max_tokens": 1050000 }
+          { "name": "gpt-5.6", "display_name": "GPT-5.6 Sol (Codex)", "max_tokens": 272000 },
+          { "name": "gpt-5.6-sol", "display_name": "GPT-5.6 Sol (Codex, explicit)", "max_tokens": 272000 },
+          { "name": "gpt-5.6-terra", "display_name": "GPT-5.6 Terra (Codex)", "max_tokens": 272000 },
+          { "name": "gpt-5.6-luna", "display_name": "GPT-5.6 Luna (Codex)", "max_tokens": 272000 }
         ]
       }
     }
