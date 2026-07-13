@@ -74,6 +74,9 @@ func buildParams(req UpstreamRequest, codexMode bool) responses.ResponseNewParam
 	if req.ReasoningEffort != "" {
 		params.Reasoning = shared.ReasoningParam{Effort: shared.ReasoningEffort(req.ReasoningEffort)}
 	}
+	if req.SafetyIdentifier != "" {
+		params.SafetyIdentifier = openai.String(req.SafetyIdentifier)
+	}
 
 	params.Input = responses.ResponseNewParamsInputUnion{OfInputItemList: buildInput(req.Input)}
 

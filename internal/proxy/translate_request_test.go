@@ -5,8 +5,9 @@ import "testing"
 func TestToUpstreamTextAndSystem(t *testing.T) {
 	temp := 0.5
 	req := ChatRequest{
-		Model:       "gpt-5.4",
-		Temperature: &temp,
+		Model:            "gpt-5.4",
+		Temperature:      &temp,
+		SafetyIdentifier: "user-hash",
 		Messages: []ChatMessage{
 			{Role: "system", Content: []byte(`"Be brief."`)},
 			{Role: "user", Content: []byte(`"Hello"`)},
@@ -25,6 +26,9 @@ func TestToUpstreamTextAndSystem(t *testing.T) {
 	}
 	if up.Temperature == nil || *up.Temperature != 0.5 {
 		t.Errorf("temperature not carried")
+	}
+	if up.SafetyIdentifier != "user-hash" {
+		t.Errorf("safety identifier = %q", up.SafetyIdentifier)
 	}
 	if len(up.Input) != 2 {
 		t.Fatalf("input len = %d, want 2 (user, assistant)", len(up.Input))

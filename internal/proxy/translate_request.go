@@ -9,11 +9,12 @@ import (
 // request. System/developer messages become instructions; the rest become input.
 func toUpstream(req ChatRequest) (UpstreamRequest, error) {
 	up := UpstreamRequest{
-		Model:           req.Model,
-		Temperature:     req.Temperature,
-		TopP:            req.TopP,
-		ReasoningEffort: req.ReasoningEffort,
-		Stream:          req.Stream,
+		Model:            req.Model,
+		Temperature:      req.Temperature,
+		TopP:             req.TopP,
+		ReasoningEffort:  req.ReasoningEffort,
+		SafetyIdentifier: req.SafetyIdentifier,
+		Stream:           req.Stream,
 	}
 	if req.MaxCompletionTokens != nil {
 		up.MaxOutputTokens = req.MaxCompletionTokens

@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -58,5 +59,60 @@ func TestBuildInputAssistantUsesStringContent(t *testing.T) {
 	}
 	if asstStr != "Hi there" {
 		t.Errorf("assistant content = %q, want %q", asstStr, "Hi there")
+	}
+}
+
+// GPT-5.6 adds values that are newer than the constants shipped by the current
+// SDK. The SDK fields are string-backed, so buildParams must preserve those
+// values instead of validating or narrowing them locally.
+func TestBuildParamsPreservesGPT56ChatFields(t *testing.T) {
+	chatReq, err := DecodeChatRequest(strings.NewReader(`{
+		"model":"gpt-5.6-sol",
+		"reasoning_effort":"max",
+		"safety_identifier":"sha256:user-123",
+		"messages":[{"role":"user","content":[
+			{"type":"image_url","image_url":{"url":"data:image/png;base64,AAAA","detail":"original"}}
+		]}]
+	}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := toUpstream(chatReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := json.Marshal(buildParams(req, true))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var body struct {
+		Reasoning struct {
+			Effort string `json:"effort"`
+		} `json:"reasoning"`
+		SafetyIdentifier string `json:"safety_identifier"`
+		Input            []struct {
+			Content []struct {
+				Type   string `json:"type"`
+				Detail string `json:"detail"`
+			} `json:"content"`
+		} `json:"input"`
+	}
+	if err := json.Unmarshal(b, &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Reasoning.Effort != "max" {
+		t.Errorf("reasoning effort = %q, want max\n%s", body.Reasoning.Effort, b)
+	}
+	if body.SafetyIdentifier != "sha256:user-123" {
+		t.Errorf("safety identifier = %q\n%s", body.SafetyIdentifier, b)
+	}
+	if len(body.Input) != 1 || len(body.Input[0].Content) != 1 {
+		t.Fatalf("unexpected input shape: %s", b)
+	}
+	image := body.Input[0].Content[0]
+	if image.Type != "input_image" || image.Detail != "original" {
+		t.Errorf("image content = %+v, want input_image with original detail\n%s", image, b)
 	}
 }

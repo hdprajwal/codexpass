@@ -19,6 +19,7 @@ type ChatRequest struct {
 	ToolChoice          json.RawMessage `json:"tool_choice"`
 	ResponseFormat      *ResponseFormat `json:"response_format"`
 	ReasoningEffort     string          `json:"reasoning_effort"`
+	SafetyIdentifier    string          `json:"safety_identifier"`
 }
 
 // ChatMessage is one chat message. Content is a string or an array of parts.

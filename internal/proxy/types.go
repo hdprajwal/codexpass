@@ -13,12 +13,14 @@ type UpstreamRequest struct {
 	Temperature     *float64
 	TopP            *float64
 	MaxOutputTokens *int64
-	ReasoningEffort string // "", low, medium, high, xhigh
-	Tools           []FunctionTool
-	ToolChoice      string // "", "auto", "none", "required", or a function name
-	TextFormat      *TextFormat
-	Stream          bool
-	IncludeUsage    bool
+	// ReasoningEffort is passed through as an opaque, model-dependent value.
+	ReasoningEffort  string
+	SafetyIdentifier string
+	Tools            []FunctionTool
+	ToolChoice       string // "", "auto", "none", "required", or a function name
+	TextFormat       *TextFormat
+	Stream           bool
+	IncludeUsage     bool
 }
 
 // InputItem is one Responses input entry: a message, a function call, or a
@@ -38,7 +40,7 @@ type InputContent struct {
 	Kind     string // "input_text" | "input_image"
 	Text     string // input_text
 	ImageURL string // input_image (may be a data: URL)
-	Detail   string // input_image (low|high|auto)
+	Detail   string // input_image (model-dependent; e.g. low|high|auto|original)
 }
 
 // FunctionTool is a normalized function tool definition.
