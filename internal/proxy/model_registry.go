@@ -10,6 +10,17 @@ import (
 // ModelRegistry resolves local aliases and exposes aliases in /v1/models.
 type ModelRegistry struct {
 	aliases map[string]string
+	state   *modelRegistryState
+}
+
+type modelRegistryState struct {
+	mu         sync.RWMutex
+	observed   bool
+	discovered map[string]string
+}
+
+var builtInModelAliases = map[string]string{
+	"gpt-5.6": "gpt-5.6-sol",
 }
 
 func NewModelRegistry(aliases map[string]string) ModelRegistry {
@@ -19,23 +30,42 @@ func NewModelRegistry(aliases map[string]string) ModelRegistry {
 			cp[k] = v
 		}
 	}
-	return ModelRegistry{aliases: cp}
+	return ModelRegistry{
+		aliases: cp,
+		state:   &modelRegistryState{discovered: map[string]string{}},
+	}
 }
 
 func (r ModelRegistry) Resolve(model string) string {
+	// Explicit configuration always takes precedence over aliases inferred from
+	// a discovered upstream catalog.
 	if v, ok := r.aliases[model]; ok {
 		return v
+	}
+	if r.state != nil {
+		r.state.mu.RLock()
+		resolved, ok := r.state.discovered[model]
+		observed := r.state.observed
+		r.state.mu.RUnlock()
+		if ok {
+			return resolved
+		}
+		// Before the upstream catalog has been observed, provisionally resolve
+		// official aliases so direct requests work without a preceding
+		// /v1/models call. Once observed, the catalog is authoritative.
+		if !observed {
+			if resolved, ok := builtInModelAliases[model]; ok {
+				return resolved
+			}
+		}
 	}
 	return model
 }
 
 func (r ModelRegistry) Expose(models []ModelInfo) []ModelInfo {
-	if len(r.aliases) == 0 {
-		return models
-	}
 	seen := map[string]bool{}
 	targets := map[string]bool{}
-	out := make([]ModelInfo, 0, len(models)+len(r.aliases))
+	out := make([]ModelInfo, 0, len(models)+len(r.aliases)+len(builtInModelAliases))
 	for _, m := range models {
 		if seen[m.ID] {
 			continue
@@ -44,8 +74,36 @@ func (r ModelRegistry) Expose(models []ModelInfo) []ModelInfo {
 		targets[m.ID] = true
 		out = append(out, m)
 	}
-	var aliases []string
+
+	// Built-in aliases are catalog-dependent: synthesize one only when its
+	// target exists and the upstream does not already provide the alias as a
+	// real model. Remember the result so subsequent requests resolve exactly
+	// the aliases advertised by /v1/models.
+	discovered := make(map[string]string)
+	for alias, target := range builtInModelAliases {
+		if _, configured := r.aliases[alias]; configured {
+			continue
+		}
+		if targets[target] && !targets[alias] {
+			discovered[alias] = target
+		}
+	}
+	if r.state != nil {
+		r.state.mu.Lock()
+		r.state.observed = true
+		r.state.discovered = discovered
+		r.state.mu.Unlock()
+	}
+
+	effective := make(map[string]string, len(discovered)+len(r.aliases))
+	for alias, target := range discovered {
+		effective[alias] = target
+	}
 	for alias, target := range r.aliases {
+		effective[alias] = target
+	}
+	var aliases []string
+	for alias, target := range effective {
 		if targets[target] && !seen[alias] {
 			aliases = append(aliases, alias)
 		}
